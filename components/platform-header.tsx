@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 // Removido: import { UserButton } from "@clerk/nextjs"
-import { ThemeSwitcher } from "@/components/theme-switcher"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Bell, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ForBetLogo } from "./icons"
@@ -49,7 +49,7 @@ export function PlatformHeader({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-4">
-        <ThemeSwitcher />
+        <ThemeToggle />
         <Button variant="ghost" size="icon" className="rounded-full">
           <Bell className="h-5 w-5" />
           <span className="sr-only">Notificações</span>

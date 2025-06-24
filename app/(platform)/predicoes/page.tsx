@@ -28,7 +28,7 @@ async function fetchFixtures(date: string) {
 
 export default async function PredictionsPageSportmonks() {
   const today = new Date().toISOString().slice(0, 10)
-  let fixtures = []
+  let fixtures: any[] = []
   let errorFetching: string | null = null
   let apiMeta: any = null
 

@@ -98,7 +98,7 @@ function processDetailedOdds(rawOdds: any[], fixtureId: number) {
     if (bookmaker) {
       if (!bookmaker.markets.has(marketName)) {
         bookmaker.markets.set(marketName, [])
-      }
+  }
       const marketOdds = bookmaker.markets.get(marketName)
       if (marketOdds) {
         marketOdds.push(odd)
@@ -108,7 +108,7 @@ function processDetailedOdds(rawOdds: any[], fixtureId: number) {
     // Adicionar ao resumo por market
     if (!marketSummary.has(marketName)) {
       marketSummary.set(marketName, [])
-    }
+}
     const marketOdds = marketSummary.get(marketName)
     if (marketOdds) {
       marketOdds.push(odd)
@@ -152,7 +152,7 @@ function processDetailedOdds(rawOdds: any[], fixtureId: number) {
           fractional: odd.fractional,
           american: odd.american
         }))
-      }
+        }
     })
     
     return {
@@ -160,7 +160,7 @@ function processDetailedOdds(rawOdds: any[], fixtureId: number) {
       name: bookmaker.name,
       logo: bookmaker.logo,
       markets: markets
-    }
+        }
   })
   
   const marketAnalysis = Array.from(marketSummary.entries()).map(entry => {
@@ -173,7 +173,7 @@ function processDetailedOdds(rawOdds: any[], fixtureId: number) {
       max_odd: values.length > 0 ? Math.max(...values) : 0,
       avg_odd: values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0,
       margin_percentage: calculateMarketMargin(odds)
-    }
+        }
   })
   
   const processedOdds = {
@@ -187,8 +187,8 @@ function processDetailedOdds(rawOdds: any[], fixtureId: number) {
       market_count: marketSummary.size,
       data_freshness: 'real-time',
       last_updated: new Date().toISOString()
-    }
-  }
+        }
+      }
   
   return processedOdds
 }
