@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+
+    /* ForBet Blue */
+    --primary-forbet-hsl: 221 83% 53%; /* HSL for Clerk theming */
+    --primary: var(--primary-forbet-hsl); /* #2563eb */
+    --primary-foreground: 210 20% 98%;
+
+    /* ForBet Purple */
+    --secondary-forbet-hsl: 262 83% 58%; /* HSL for Clerk theming */
+    --secondary: var(--secondary-forbet-hsl); /* #7c3aed */
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+
+    /* ForBet Green */
+    --accent-forbet-hsl: 142 93% 31%; /* HSL for Clerk theming */
+    --accent: var(--accent-forbet-hsl); /* #059669 */
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 221 83% 53%; /* Primary color for rings */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+
+    /* ForBet Blue */
+    --primary-forbet-hsl: 221 83% 63%; /* Lighter HSL for dark mode */
+    --primary: var(--primary-forbet-hsl);
+    --primary-foreground: 210 20% 98%;
+
+    /* ForBet Purple */
+    --secondary-forbet-hsl: 262 83% 68%; /* Lighter HSL for dark mode */
+    --secondary: var(--secondary-forbet-hsl);
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+
+    /* ForBet Green */
+    --accent-forbet-hsl: 142 73% 41%; /* Lighter HSL for dark mode */
+    --accent: var(--accent-forbet-hsl);
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 221 83% 63%; /* Primary color for rings in dark mode */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
