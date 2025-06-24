@@ -222,7 +222,6 @@ export class MultiAPIClient {
   // Implementações específicas de cada API
   private async fetchFromTheSportsDB(date: string): Promise<UnifiedFixture[]> {
     // TheSportsDB usa formato diferente de data
-    const apiDate = date.replace(/-/g, '-') // Já está no formato correto
     const response = await fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${date}&s=Soccer`)
     
     if (!response.ok) throw new Error(`TheSportsDB error: ${response.status}`)
@@ -230,7 +229,15 @@ export class MultiAPIClient {
     const data = await response.json()
     const events = data.events || []
 
-    return events.map((event: any) => ({
+    // Filtrar apenas eventos da data solicitada (TheSportsDB às vezes retorna dados antigos)
+    const validEvents = events.filter((event: any) => {
+      // Verificar se a data do evento corresponde à data solicitada
+      return event.dateEvent === date
+    })
+
+    console.log(`🔍 TheSportsDB: ${events.length} eventos totais, ${validEvents.length} válidos para ${date}`)
+
+    return validEvents.map((event: any) => ({
       id: `thesportsdb_${event.idEvent}`,
       provider: 'TheSportsDB',
       originalId: event.idEvent,
@@ -246,7 +253,7 @@ export class MultiAPIClient {
         name: event.strLeague,
         logo: event.strLeagueBadge 
       },
-      startTime: `${event.dateEvent}T${event.strTime}:00Z`,
+      startTime: `${event.dateEvent}T${event.strTime || '12:00:00'}:00Z`,
       status: this.mapTheSportsDBStatus(event.strStatus),
       score: event.intHomeScore !== null ? {
         home: parseInt(event.intHomeScore) || 0,
