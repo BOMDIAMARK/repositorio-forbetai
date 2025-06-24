@@ -27,7 +27,51 @@ const mockFixtures: UpcomingFixtureForAnalysis[] = [
     status: "SCHEDULED",
     ai_confidence: 85
   },
-  // ... mais jogos
+  {
+    id: "2",
+    home_team: { name: "Manchester City", logo: "/placeholder.svg" },
+    away_team: { name: "Liverpool", logo: "/placeholder.svg" },
+    league: { name: "Premier League" },
+    match_date: "2024-01-16T15:30:00Z",
+    status: "SCHEDULED",
+    ai_confidence: 78
+  },
+  {
+    id: "3",
+    home_team: { name: "Bayern Munich", logo: "/placeholder.svg" },
+    away_team: { name: "Borussia Dortmund", logo: "/placeholder.svg" },
+    league: { name: "Bundesliga" },
+    match_date: "2024-01-17T19:30:00Z",
+    status: "SCHEDULED",
+    ai_confidence: 82
+  },
+  {
+    id: "4",
+    home_team: { name: "PSG", logo: "/placeholder.svg" },
+    away_team: { name: "Olympique Marseille", logo: "/placeholder.svg" },
+    league: { name: "Ligue 1" },
+    match_date: "2024-01-18T21:00:00Z",
+    status: "SCHEDULED",
+    ai_confidence: 73
+  },
+  {
+    id: "5",
+    home_team: { name: "Juventus", logo: "/placeholder.svg" },
+    away_team: { name: "AC Milan", logo: "/placeholder.svg" },
+    league: { name: "Serie A" },
+    match_date: "2024-01-19T20:45:00Z",
+    status: "SCHEDULED",
+    ai_confidence: 79
+  },
+  {
+    id: "6",
+    home_team: { name: "Flamengo", logo: "/placeholder.svg" },
+    away_team: { name: "Palmeiras", logo: "/placeholder.svg" },
+    league: { name: "Brasileirão" },
+    match_date: "2024-01-20T16:00:00Z",
+    status: "SCHEDULED",
+    ai_confidence: 88
+  }
 ]
 
 export default function AnalysisPage() {
