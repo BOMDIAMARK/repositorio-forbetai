@@ -41,6 +41,7 @@ interface H2HRecord {
     score: string
     date: string
   }>
+  total_matches?: number
 }
 
 interface TeamForm {
@@ -55,6 +56,8 @@ interface TeamForm {
   losses: number
   goals_for: number
   goals_against: number
+  total_matches?: number
+  form_percentage?: number
 }
 
 export default function DetailedAnalysisPage() {
