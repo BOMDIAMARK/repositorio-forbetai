@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CalendarIcon, ClockIcon, TrendingUpIcon, BarChart3Icon } from "lucide-react"
 import { FixtureDetailsModal } from "./fixture-details-modal"
+import Image from "next/image"
 import type { SportMonksFixture } from "@/app/(platform)/predicoes/types-sportmonks"
 
 interface SportmonksPredictionCardProps {
@@ -18,6 +19,22 @@ interface PredictionData {
   corners: { over95: number }
   cards: { over45: number }
   confidence: number
+}
+
+interface TeamData {
+  name?: string
+  image_path?: string
+}
+
+interface PredictionResponse {
+  data?: {
+    predictions?: Record<string, unknown>
+    algorithm_predictions?: Record<string, unknown>
+    confidence_metrics?: {
+      overall_confidence?: number
+    }
+  }
+  confidence?: number
 }
 
 export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardProps) {
@@ -49,10 +66,10 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
   }
 
   // Get league name
-  const leagueName = fixture.league?.data?.name || (fixture.league as any)?.name || "Liga Desconhecida"
+  const leagueName = fixture.league?.data?.name || (fixture.league as Record<string, unknown>)?.name || "Liga Desconhecida"
 
   // Componente para logo dos times
-  const TeamLogo = ({ team, className = "w-8 h-8" }: { team: any; className?: string }) => {
+  const TeamLogo = ({ team, className = "w-8 h-8" }: { team: TeamData | undefined; className?: string }) => {
     const [imageError, setImageError] = useState(false)
     
     if (!team?.image_path || imageError) {
@@ -67,9 +84,11 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
 
     return (
       <div className={`${className} rounded-full overflow-hidden border`}>
-        <img 
+        <Image 
           src={team.image_path} 
-          alt={team.name}
+          alt={team.name || "Team logo"}
+          width={32}
+          height={32}
           className="w-full h-full object-cover"
           onError={() => setImageError(true)}
         />
@@ -86,29 +105,30 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
       try {
         const response = await fetch(`/api/sportmonks/predictions/${fixture.id}`)
         if (response.ok) {
-          const data = await response.json()
+          const data: PredictionResponse = await response.json()
           console.log('Predições recebidas:', data)
           
           const pred = data.data?.predictions || data.data?.algorithm_predictions
           
-          if (pred) {
+          if (pred && typeof pred === 'object') {
             // Extrair predições reais da SportMonks
+            const predObj = pred as Record<string, Record<string, number>>
             setPredictions({
               result: {
-                home: Math.round((pred.match_winner?.home_win_probability || pred.home_win_probability || 0.45) * 100),
-                draw: Math.round((pred.match_winner?.draw_probability || pred.draw_probability || 0.25) * 100),
-                away: Math.round((pred.match_winner?.away_win_probability || pred.away_win_probability || 0.30) * 100)
+                home: Math.round(((predObj.match_winner?.home_win_probability as number) || (predObj.home_win_probability as number) || 0.45) * 100),
+                draw: Math.round(((predObj.match_winner?.draw_probability as number) || (predObj.draw_probability as number) || 0.25) * 100),
+                away: Math.round(((predObj.match_winner?.away_win_probability as number) || (predObj.away_win_probability as number) || 0.30) * 100)
               },
               goals: {
-                over25: Math.round((pred.goals?.over_2_5_probability || pred.over_2_5_probability || 0.62) * 100),
-                under25: Math.round((pred.goals?.under_2_5_probability || pred.under_2_5_probability || 0.38) * 100),
-                btts: Math.round((pred.goals?.both_teams_score_probability || pred.both_teams_score_probability || 0.58) * 100)
+                over25: Math.round(((predObj.goals?.over_2_5_probability as number) || (predObj.over_2_5_probability as number) || 0.62) * 100),
+                under25: Math.round(((predObj.goals?.under_2_5_probability as number) || (predObj.under_2_5_probability as number) || 0.38) * 100),
+                btts: Math.round(((predObj.goals?.both_teams_score_probability as number) || (predObj.both_teams_score_probability as number) || 0.58) * 100)
               },
               corners: {
-                over95: Math.round((pred.corners?.over_9_5_probability || 0.72) * 100)
+                over95: Math.round(((predObj.corners?.over_9_5_probability as number) || 0.72) * 100)
               },
               cards: {
-                over45: Math.round((pred.cards?.over_4_5_probability || 0.55) * 100)
+                over45: Math.round(((predObj.cards?.over_4_5_probability as number) || 0.55) * 100)
               },
               confidence: Math.round((data.data?.confidence_metrics?.overall_confidence || data.confidence || 0.75) * 100)
             })
@@ -259,13 +279,13 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
                 <h4 className="text-sm font-semibold text-foreground mb-2">Gols</h4>
                 <div className="grid grid-cols-2 gap-2 text-center text-sm">
                   <div>
-                    <span className="text-muted-foreground">Over 2.5</span>
+                    <span className="text-muted-foreground">Mais de 2.5</span>
                     <div className={`font-bold ${getStatusColor(predictions.goals.over25)}`}>
                       {predictions.goals.over25}%
                     </div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">BTTS</span>
+                    <span className="text-muted-foreground">Ambas Marcam</span>
                     <div className={`font-bold ${getStatusColor(predictions.goals.btts)}`}>
                       {predictions.goals.btts}%
                     </div>
@@ -278,7 +298,7 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
                 <div>
                   <h4 className="text-sm font-semibold text-foreground mb-1">Escanteios</h4>
                   <div className="text-center text-sm">
-                    <span className="text-muted-foreground">Over 9.5</span>
+                    <span className="text-muted-foreground">Mais de 9.5</span>
                     <div className={`font-bold ${getStatusColor(predictions.corners.over95)}`}>
                       {predictions.corners.over95}%
                     </div>
@@ -287,7 +307,7 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
                 <div>
                   <h4 className="text-sm font-semibold text-foreground mb-1">Cartões</h4>
                   <div className="text-center text-sm">
-                    <span className="text-muted-foreground">Over 4.5</span>
+                    <span className="text-muted-foreground">Mais de 4.5</span>
                     <div className={`font-bold ${getStatusColor(predictions.cards.over45)}`}>
                       {predictions.cards.over45}%
                     </div>

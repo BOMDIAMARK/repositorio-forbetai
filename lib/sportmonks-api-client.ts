@@ -1,5 +1,6 @@
 import type { SportMonksFixture, SportMonksFixtureDetails } from "@/app/(platform)/predicoes/types-sportmonks"
-import { SportMonksOdd, ProcessedOdds, getBestOdds } from './odds-mapper'
+import { SportMonksOdd, getBestOdds } from './odds-mapper'
+import type { ProcessedOdds } from './odds-mapper'
 
 const API_BASE_URL = process.env.SPORTMONKS_BASE_URL || "https://api.sportmonks.com/v3"
 const API_KEY = process.env.SPORTMONKS_API_KEY

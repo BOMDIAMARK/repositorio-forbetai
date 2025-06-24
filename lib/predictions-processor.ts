@@ -1,20 +1,25 @@
-import { ProcessedOdds } from './odds-mapper'
+
+
+export interface PredictionEntry {
+  probability: number
+  description: string
+}
 
 export interface PredictionData {
   fullTimeResult?: {
-    home: { probability: number; description: string }
-    draw: { probability: number; description: string }
-    away: { probability: number; description: string }
+    home: PredictionEntry
+    draw: PredictionEntry
+    away: PredictionEntry
   }
   bothTeamsToScore?: {
-    yes: { probability: number; description: string }
-    no: { probability: number; description: string }
+    yes: PredictionEntry
+    no: PredictionEntry
   }
   totalGoals?: {
-    over25: { probability: number; description: string }
-    under25: { probability: number; description: string }
-    over15: { probability: number; description: string }
-    under15: { probability: number; description: string }
+    over25: PredictionEntry
+    under25: PredictionEntry
+    over15: PredictionEntry
+    under15: PredictionEntry
   }
   correctScore?: Array<{
     score: string
@@ -29,7 +34,7 @@ function oddsToProbability(odds: number): number {
   return Math.round((1 / odds) * 100 * 100) / 100 // Arredonda para 2 casas decimais
 }
 
-// Determina a descrição baseada na probabilidade
+// Determina a descrição baseada na probabilidade (já em português)
 function getProbabilityDescription(probability: number): string {
   if (probability >= 70) return 'Muito Provável'
   if (probability >= 55) return 'Provável'
@@ -39,14 +44,17 @@ function getProbabilityDescription(probability: number): string {
 }
 
 // Processa odds em formato de predições intuitivas
-export function processPredictions(processedOdds?: ProcessedOdds): PredictionData {
+export function processPredictions(processedOdds?: Record<string, unknown>): PredictionData {
   const predictions: PredictionData = {}
 
+  if (!processedOdds) return predictions
+
   // Resultado Final
-  if (processedOdds?.fullTimeResult) {
-    const homeProbability = oddsToProbability(processedOdds.fullTimeResult.home)
-    const drawProbability = oddsToProbability(processedOdds.fullTimeResult.draw)
-    const awayProbability = oddsToProbability(processedOdds.fullTimeResult.away)
+  const fullTimeResult = processedOdds.fullTimeResult as Record<string, number>
+  if (fullTimeResult) {
+    const homeProbability = oddsToProbability(fullTimeResult.home)
+    const drawProbability = oddsToProbability(fullTimeResult.draw)
+    const awayProbability = oddsToProbability(fullTimeResult.away)
 
     predictions.fullTimeResult = {
       home: {
@@ -65,9 +73,10 @@ export function processPredictions(processedOdds?: ProcessedOdds): PredictionDat
   }
 
   // Ambas Marcam
-  if (processedOdds?.bothTeamsToScore) {
-    const yesProbability = oddsToProbability(processedOdds.bothTeamsToScore.yes)
-    const noProbability = oddsToProbability(processedOdds.bothTeamsToScore.no)
+  const bothTeamsToScore = processedOdds.bothTeamsToScore as Record<string, number>
+  if (bothTeamsToScore) {
+    const yesProbability = oddsToProbability(bothTeamsToScore.yes)
+    const noProbability = oddsToProbability(bothTeamsToScore.no)
 
     predictions.bothTeamsToScore = {
       yes: {
@@ -82,30 +91,32 @@ export function processPredictions(processedOdds?: ProcessedOdds): PredictionDat
   }
 
   // Total de Gols
-  if (processedOdds?.totalGoals) {
+  const totalGoals = processedOdds.totalGoals as Record<string, number>
+  if (totalGoals) {
     predictions.totalGoals = {
       over25: {
-        probability: oddsToProbability(processedOdds.totalGoals.over25),
-        description: getProbabilityDescription(oddsToProbability(processedOdds.totalGoals.over25))
+        probability: oddsToProbability(totalGoals.over25),
+        description: getProbabilityDescription(oddsToProbability(totalGoals.over25))
       },
       under25: {
-        probability: oddsToProbability(processedOdds.totalGoals.under25),
-        description: getProbabilityDescription(oddsToProbability(processedOdds.totalGoals.under25))
+        probability: oddsToProbability(totalGoals.under25),
+        description: getProbabilityDescription(oddsToProbability(totalGoals.under25))
       },
       over15: {
-        probability: oddsToProbability(processedOdds.totalGoals.over15),
-        description: getProbabilityDescription(oddsToProbability(processedOdds.totalGoals.over15))
+        probability: oddsToProbability(totalGoals.over15),
+        description: getProbabilityDescription(oddsToProbability(totalGoals.over15))
       },
       under15: {
-        probability: oddsToProbability(processedOdds.totalGoals.under15),
-        description: getProbabilityDescription(oddsToProbability(processedOdds.totalGoals.under15))
+        probability: oddsToProbability(totalGoals.under15),
+        description: getProbabilityDescription(oddsToProbability(totalGoals.under15))
       }
     }
   }
 
   // Placar Correto
-  if (processedOdds?.correctScore) {
-    predictions.correctScore = processedOdds.correctScore.map(score => ({
+  const correctScore = processedOdds.correctScore as Array<{ score: string; odd: number }>
+  if (correctScore && Array.isArray(correctScore)) {
+    predictions.correctScore = correctScore.map(score => ({
       score: score.score,
       probability: oddsToProbability(score.odd),
       description: getProbabilityDescription(oddsToProbability(score.odd))

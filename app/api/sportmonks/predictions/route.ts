@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { fetchPredictionsByDate } from "@/lib/sportmonks-api-client"
-import { cacheManager, CACHE_CONFIG } from "@/lib/redis-cache"
+import { cacheManager } from "@/lib/redis-cache"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

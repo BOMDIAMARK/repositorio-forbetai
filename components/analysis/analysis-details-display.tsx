@@ -54,37 +54,37 @@ export function AnalysisDetailsDisplay({ fixtureDetails, loading }: AnalysisDeta
   const awayTeam = fixtureDetails.participants?.find((p) => p.meta?.location === "away")
   const { date, time } = formatDateTime(fixtureDetails.starting_at)
 
-  const renderSportMonksPrediction = (prediction: any) => {
-    const predData = prediction.predictions
-    const predType = prediction.type?.name || "Desconhecido"
+  const renderSportMonksPrediction = (prediction: Record<string, unknown>) => {
+    const predData = prediction.predictions as Record<string, unknown>
+    const predType = (prediction.type as Record<string, unknown>)?.name || "Desconhecido"
 
     if (predType === "1X2" && predData.home !== undefined) {
       return (
-        <TableRow key={prediction.id}>
+        <TableRow key={prediction.id as string}>
           <TableCell className="font-medium">{predType}</TableCell>
-          <TableCell>Casa: {predData.home?.toFixed(2)}%</TableCell>
-          <TableCell>Empate: {predData.draw?.toFixed(2)}%</TableCell>
-          <TableCell>Fora: {predData.away?.toFixed(2)}%</TableCell>
+          <TableCell>Casa: {(predData.home as number)?.toFixed(2)}%</TableCell>
+          <TableCell>Empate: {(predData.draw as number)?.toFixed(2)}%</TableCell>
+          <TableCell>Fora: {(predData.away as number)?.toFixed(2)}%</TableCell>
         </TableRow>
       )
     }
     if (predType.toLowerCase().includes("over/under") && predData.total !== undefined) {
       return (
-        <TableRow key={prediction.id}>
+        <TableRow key={prediction.id as string}>
           <TableCell className="font-medium">
             {predType} ({predData.total})
           </TableCell>
-          <TableCell>Mais de: {predData.over?.toFixed(2)}%</TableCell>
-          <TableCell colSpan={2}>Menos de: {predData.under?.toFixed(2)}%</TableCell>
+          <TableCell>Mais de: {(predData.over as number)?.toFixed(2)}%</TableCell>
+          <TableCell colSpan={2}>Menos de: {(predData.under as number)?.toFixed(2)}%</TableCell>
         </TableRow>
       )
     }
     if (predType.toLowerCase().includes("both teams to score") && predData.yes !== undefined) {
       return (
-        <TableRow key={prediction.id}>
+        <TableRow key={prediction.id as string}>
           <TableCell className="font-medium">{predType}</TableCell>
-          <TableCell>Sim: {predData.yes?.toFixed(2)}%</TableCell>
-          <TableCell colSpan={2}>Não: {predData.no?.toFixed(2)}%</TableCell>
+          <TableCell>Sim: {(predData.yes as number)?.toFixed(2)}%</TableCell>
+          <TableCell colSpan={2}>Não: {(predData.no as number)?.toFixed(2)}%</TableCell>
         </TableRow>
       )
     }
@@ -92,29 +92,21 @@ export function AnalysisDetailsDisplay({ fixtureDetails, loading }: AnalysisDeta
     // Para outros tipos de predição, tentar extrair valores úteis
     if (predData && typeof predData === 'object') {
       const values = Object.entries(predData)
-        .filter(([key, value]) => typeof value === 'number' && !isNaN(value))
+        .filter(([, value]) => typeof value === 'number' && !isNaN(value))
         .map(([key, value]) => `${key}: ${(value as number).toFixed(2)}%`)
         .join(', ')
       
       if (values) {
         return (
-          <TableRow key={prediction.id}>
+          <TableRow key={prediction.id as string}>
             <TableCell className="font-medium">{predType}</TableCell>
             <TableCell colSpan={3}>{values}</TableCell>
           </TableRow>
         )
       }
     }
-    
-    // Fallback para casos onde não conseguimos processar
-    return (
-      <TableRow key={prediction.id}>
-        <TableCell className="font-medium">{predType}</TableCell>
-        <TableCell colSpan={3} className="text-muted-foreground">
-          Dados não disponíveis em formato legível
-        </TableCell>
-      </TableRow>
-    )
+
+    return null
   }
 
   return (

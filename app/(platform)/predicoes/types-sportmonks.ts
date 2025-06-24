@@ -1,11 +1,6 @@
 import { ProcessedOdds } from '@/lib/odds-mapper'
 
-interface SportMonksTeamInfo {
-  id: number
-  name: string
-  image_path?: string
-  // Add other team properties if needed
-}
+
 
 interface SportMonksParticipant {
   id: number
