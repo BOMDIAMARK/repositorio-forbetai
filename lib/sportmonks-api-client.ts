@@ -121,8 +121,8 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
     throw new Error(`Formato de data inválido: ${date}. Use YYYY-MM-DD`)
   }
   
-  // Includes expandidos para carregar odds básicas na lista
-  const includes = "participants,odds"
+  // Includes válidos para a API do SportMonks
+  const includes = "participants"
   const endpoint = `/football/fixtures/between/${date}/${date}?include=${includes}`
 
   try {
@@ -131,20 +131,14 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
     const fixtures = response.data || []
     console.log(`📊 Encontradas ${fixtures.length} fixtures para ${date}`)
     
-    // Processar odds básicas se disponíveis
+    // Por enquanto, retornar fixtures sem odds para evitar muitas requisições
+    // As odds serão carregadas individualmente quando necessário
     const processedFixtures = fixtures.map((fixture: any) => {
-      if (fixture.odds && fixture.odds.length > 0) {
-        const rawOdds = fixture.odds as SportMonksOdd[]
-        const processedOdds = getBestOdds(rawOdds)
-        
-        return {
-          ...fixture,
-          rawOdds,
-          processedOdds
-        }
+      return {
+        ...fixture,
+        rawOdds: null,
+        processedOdds: null
       }
-      
-      return fixture
     })
     
     // Log de sample dos dados se houver fixtures
