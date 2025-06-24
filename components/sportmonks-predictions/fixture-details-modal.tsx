@@ -50,8 +50,10 @@ export function FixtureDetailsModal({ fixture, isOpen, onClose }: FixtureDetails
     setError(null)
 
     try {
-      console.log(`🔍 Buscando detalhes para fixture: ${fixture.id}`)
-      const res = await fetch(`/api/sportmonks/fixtures/${fixture.id}`)
+      // Usar originalId se disponível (para fixtures do multi-API), senão usar id
+      const fixtureId = (fixture as any).originalId || fixture.id
+      console.log(`🔍 Buscando detalhes para fixture: ${fixtureId} (original: ${fixture.id})`)
+      const res = await fetch(`/api/sportmonks/fixtures/${fixtureId}`)
       
       if (!res.ok) {
         const errorData = await res.json()

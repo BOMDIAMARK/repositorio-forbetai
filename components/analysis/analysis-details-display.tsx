@@ -62,9 +62,9 @@ export function AnalysisDetailsDisplay({ fixtureDetails, loading }: AnalysisDeta
       return (
         <TableRow key={prediction.id}>
           <TableCell className="font-medium">{predType}</TableCell>
-          <TableCell>Casa: {predData.home?.toFixed(2)}</TableCell>
-          <TableCell>Empate: {predData.draw?.toFixed(2)}</TableCell>
-          <TableCell>Fora: {predData.away?.toFixed(2)}</TableCell>
+          <TableCell>Casa: {predData.home?.toFixed(2)}%</TableCell>
+          <TableCell>Empate: {predData.draw?.toFixed(2)}%</TableCell>
+          <TableCell>Fora: {predData.away?.toFixed(2)}%</TableCell>
         </TableRow>
       )
     }
@@ -74,8 +74,8 @@ export function AnalysisDetailsDisplay({ fixtureDetails, loading }: AnalysisDeta
           <TableCell className="font-medium">
             {predType} ({predData.total})
           </TableCell>
-          <TableCell>Mais de: {predData.over?.toFixed(2)}</TableCell>
-          <TableCell colSpan={2}>Menos de: {predData.under?.toFixed(2)}</TableCell>
+          <TableCell>Mais de: {predData.over?.toFixed(2)}%</TableCell>
+          <TableCell colSpan={2}>Menos de: {predData.under?.toFixed(2)}%</TableCell>
         </TableRow>
       )
     }
@@ -83,15 +83,36 @@ export function AnalysisDetailsDisplay({ fixtureDetails, loading }: AnalysisDeta
       return (
         <TableRow key={prediction.id}>
           <TableCell className="font-medium">{predType}</TableCell>
-          <TableCell>Sim: {predData.yes?.toFixed(2)}</TableCell>
-          <TableCell colSpan={2}>Não: {predData.no?.toFixed(2)}</TableCell>
+          <TableCell>Sim: {predData.yes?.toFixed(2)}%</TableCell>
+          <TableCell colSpan={2}>Não: {predData.no?.toFixed(2)}%</TableCell>
         </TableRow>
       )
     }
+    
+    // Para outros tipos de predição, tentar extrair valores úteis
+    if (predData && typeof predData === 'object') {
+      const values = Object.entries(predData)
+        .filter(([key, value]) => typeof value === 'number' && !isNaN(value))
+        .map(([key, value]) => `${key}: ${(value as number).toFixed(2)}%`)
+        .join(', ')
+      
+      if (values) {
+        return (
+          <TableRow key={prediction.id}>
+            <TableCell className="font-medium">{predType}</TableCell>
+            <TableCell colSpan={3}>{values}</TableCell>
+          </TableRow>
+        )
+      }
+    }
+    
+    // Fallback para casos onde não conseguimos processar
     return (
       <TableRow key={prediction.id}>
         <TableCell className="font-medium">{predType}</TableCell>
-        <TableCell colSpan={3}>{JSON.stringify(predData)}</TableCell>
+        <TableCell colSpan={3} className="text-muted-foreground">
+          Dados não disponíveis em formato legível
+        </TableCell>
       </TableRow>
     )
   }

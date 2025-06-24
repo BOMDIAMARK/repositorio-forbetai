@@ -6,12 +6,16 @@ import { CalendarX, AlertTriangle, Zap, DollarSign } from "lucide-react" // Chan
 // Usar o novo sistema multi-API
 async function fetchFixturesMultiAPI(date: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/fixtures?date=${date}`, {
+    // Para server-side fetch, usar URL absoluta baseada no ambiente
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+      
+    const response = await fetch(`${baseUrl}/api/fixtures?date=${date}`, {
       next: { revalidate: 300 } // Cache por 5 minutos
     })
     
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`)
+      throw new Error(`API Error: ${response.status} - ${response.statusText}`)
     }
     
     const result = await response.json()
@@ -124,7 +128,7 @@ export default async function PredictionsPageSportmonks() {
 
       {!errorFetching && fixtures.length > 0 && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {fixtures.map((fixture) => (
+          {fixtures.map((fixture: any) => (
             <SportmonksPredictionCard key={fixture.id || fixture._multiApi?.unifiedId} fixture={fixture} />
           ))}
         </div>
