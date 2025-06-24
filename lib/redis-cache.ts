@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis'
+import IORedis from 'ioredis'
 
 export interface CacheConfig {
   defaultTTL: number // TTL padrão em segundos
@@ -35,6 +36,114 @@ export interface CacheClient {
   del(key: string): Promise<void>
   clear?(): Promise<void>
   isConnected(): boolean
+}
+
+// Cliente Redis Cloud para produção (ioredis)
+class RedisCloudClient implements CacheClient {
+  private redis: IORedis | null = null
+  private connected = false
+
+  constructor() {
+    try {
+      const redisUrl = process.env.REDIS_URL
+
+      if (redisUrl) {
+        this.redis = new IORedis(redisUrl, {
+          maxRetriesPerRequest: 3,
+          lazyConnect: true,
+          connectTimeout: 10000
+        })
+
+        // Verificar conexão
+        this.redis.ping().then(() => {
+          this.connected = true
+          console.log('✅ Redis Cloud conectado com sucesso')
+        }).catch((error) => {
+          console.error('❌ Erro ao conectar Redis Cloud:', error)
+          this.connected = false
+        })
+
+        // Event listeners para monitoramento
+        this.redis.on('connect', () => {
+          console.log('🔗 Redis Cloud conectado')
+          this.connected = true
+        })
+
+        this.redis.on('error', (error) => {
+          console.error('❌ Erro Redis Cloud:', error)
+          this.connected = false
+        })
+
+        this.redis.on('close', () => {
+          console.log('🔌 Redis Cloud desconectado')
+          this.connected = false
+        })
+
+      } else {
+        console.log('⚠️ REDIS_URL não encontrada')
+      }
+    } catch (error) {
+      console.error('❌ Erro ao inicializar Redis Cloud:', error)
+    }
+  }
+
+  isConnected(): boolean {
+    return this.connected && this.redis !== null
+  }
+
+  async get<T>(key: string): Promise<T | null> {
+    if (!this.redis || !this.connected) return null
+    
+    try {
+      const result = await this.redis.get(key)
+      if (!result) return null
+      
+      // Parse JSON se for string
+      if (typeof result === 'string') {
+        try {
+          return JSON.parse(result) as T
+        } catch {
+          return result as T
+        }
+      }
+      
+      return result as T
+    } catch (error) {
+      console.error(`❌ Erro ao buscar cache Redis Cloud [${key}]:`, error)
+      return null
+    }
+  }
+
+  async set(key: string, value: any, ttl: number = CACHE_CONFIG.defaultTTL): Promise<void> {
+    if (!this.redis || !this.connected) return
+
+    try {
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value)
+      await this.redis.setex(key, ttl, serialized)
+      console.log(`💾 Cache salvo no Redis Cloud [${key}] TTL: ${ttl}s`)
+    } catch (error) {
+      console.error(`❌ Erro ao salvar cache Redis Cloud [${key}]:`, error)
+    }
+  }
+
+  async del(key: string): Promise<void> {
+    if (!this.redis || !this.connected) return
+
+    try {
+      await this.redis.del(key)
+      console.log(`🗑️ Cache removido do Redis Cloud [${key}]`)
+    } catch (error) {
+      console.error(`❌ Erro ao remover cache Redis Cloud [${key}]:`, error)
+    }
+  }
+
+  // Método para fechar conexão quando necessário
+  disconnect(): void {
+    if (this.redis) {
+      this.redis.disconnect()
+      this.connected = false
+    }
+  }
 }
 
 // Cliente Redis para produção (Upstash)
@@ -172,7 +281,13 @@ class MemoryCacheClient implements CacheClient {
 
 // Factory para criar o cliente apropriado
 function createCacheClient(): CacheClient {
-  // Em produção, tentar Upstash primeiro
+  // Tentar Redis Cloud primeiro (se REDIS_URL estiver configurada)
+  if (process.env.REDIS_URL) {
+    const redisCloudClient = new RedisCloudClient()
+    return redisCloudClient // Retorna mesmo se não conectado ainda (lazy connect)
+  }
+  
+  // Em produção, tentar Upstash como segunda opção
   if (process.env.NODE_ENV === 'production' || process.env.UPSTASH_REDIS_REST_URL) {
     const upstashClient = new UpstashRedisClient()
     if (upstashClient.isConnected()) {
@@ -264,9 +379,15 @@ export class CacheManager {
   }
 
   getCacheInfo(): { type: string, connected: boolean } {
+    const isRedisCloud = this.client instanceof RedisCloudClient
     const isUpstash = this.client instanceof UpstashRedisClient
+    
+    let type = 'Memory'
+    if (isRedisCloud) type = 'Redis Cloud'
+    else if (isUpstash) type = 'Redis (Upstash)'
+    
     return {
-      type: isUpstash ? 'Redis (Upstash)' : 'Memory',
+      type,
       connected: this.client.isConnected()
     }
   }

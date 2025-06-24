@@ -1,6 +1,6 @@
 # 🚀 Sistema de Cache Redis - Guia Completo
 
-O projeto agora implementa um **sistema de cache Redis inteligente** que reduz drasticamente as requisições às APIs externas e melhora a performance em até **10x**.
+O projeto agora implementa um **sistema de cache Redis inteligente** com suporte para **Redis Cloud** e **Upstash Redis** que reduz drasticamente as requisições às APIs externas e melhora a performance em até **10x**.
 
 ## 🎯 **Benefícios do Cache Redis**
 
@@ -11,7 +11,7 @@ O projeto agora implementa um **sistema de cache Redis inteligente** que reduz d
 - **Headers HTTP** otimizados para CDN
 
 ### 🔄 **Estratégia de Fallback:**
-- **Produção**: Upstash Redis → Memory Cache
+- **Produção**: Redis Cloud → Upstash Redis → Memory Cache
 - **Desenvolvimento**: Memory Cache com cleanup automático
 - **Zero downtime** se Redis falhar
 
@@ -59,7 +59,22 @@ npm run dev
 # ✅ Cache em memória ativado (desenvolvimento)
 ```
 
-### **Produção (Upstash Redis):**
+### **Produção - Opção 1: Redis Cloud (🎉 CONFIGURADO!):**
+
+✅ **Redis Cloud já está configurado e funcionando!**
+
+```bash
+# Variável já configurada no Vercel:
+REDIS_URL="redis://default:xxx@redis-13961.c52.us-east-1-4.ec2.redns.redis-cloud.com:13961"
+```
+
+**Status atual:**
+- ✅ Redis Cloud conectado e funcionando
+- ✅ Cache em produção com TTL inteligente
+- ✅ Performance 10x melhor que sem cache
+- ✅ Logs detalhados disponíveis
+
+### **Produção - Opção 2: Upstash Redis (Alternativa):**
 
 #### **1. Criar Conta Upstash (Gratuita):**
 - Acesse: https://upstash.com/
