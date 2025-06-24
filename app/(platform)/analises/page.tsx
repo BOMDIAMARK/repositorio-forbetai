@@ -16,58 +16,58 @@ interface UpcomingFixtureForAnalysis {
   ai_confidence?: number
 }
 
-// Mock data - substituir por dados reais da API
+// Mock data com IDs reais da SportMonks (FIFA Club World Cup)
 const mockFixtures: UpcomingFixtureForAnalysis[] = [
   {
-    id: "1",
-    home_team: { name: "Barcelona", logo: "/placeholder.svg" },
-    away_team: { name: "Real Madrid", logo: "/placeholder.svg" },
-    league: { name: "La Liga" },
+    id: "19338814",
+    home_team: { name: "Inter Miami", logo: "https://cdn.sportmonks.com/images/soccer/teams/3/239235.png" },
+    away_team: { name: "Palmeiras", logo: "https://cdn.sportmonks.com/images/soccer/teams/30/3422.png" },
+    league: { name: "FIFA Club World Cup" },
     match_date: "2024-01-15T20:00:00Z",
     status: "SCHEDULED",
     ai_confidence: 85
   },
   {
-    id: "2",
-    home_team: { name: "Manchester City", logo: "/placeholder.svg" },
-    away_team: { name: "Liverpool", logo: "/placeholder.svg" },
-    league: { name: "Premier League" },
+    id: "19338815",
+    home_team: { name: "Porto", logo: "https://cdn.sportmonks.com/images/soccer/teams/12/652.png" },
+    away_team: { name: "Al Ahly", logo: "https://cdn.sportmonks.com/images/soccer/teams/12/460.png" },
+    league: { name: "FIFA Club World Cup" },
     match_date: "2024-01-16T15:30:00Z",
     status: "SCHEDULED",
     ai_confidence: 78
   },
   {
-    id: "3",
-    home_team: { name: "Bayern Munich", logo: "/placeholder.svg" },
-    away_team: { name: "Borussia Dortmund", logo: "/placeholder.svg" },
-    league: { name: "Bundesliga" },
+    id: "19339042",
+    home_team: { name: "Benfica", logo: "https://cdn.sportmonks.com/images/soccer/teams/29/605.png" },
+    away_team: { name: "FC Bayern München", logo: "https://cdn.sportmonks.com/images/soccer/teams/23/503.png" },
+    league: { name: "FIFA Club World Cup" },
     match_date: "2024-01-17T19:30:00Z",
     status: "SCHEDULED",
     ai_confidence: 82
   },
   {
-    id: "4",
-    home_team: { name: "PSG", logo: "/placeholder.svg" },
-    away_team: { name: "Olympique Marseille", logo: "/placeholder.svg" },
-    league: { name: "Ligue 1" },
+    id: "19339043",
+    home_team: { name: "Auckland City", logo: "https://cdn.sportmonks.com/images/soccer/teams/30/1022.png" },
+    away_team: { name: "Boca Juniors", logo: "https://cdn.sportmonks.com/images/soccer/teams/11/587.png" },
+    league: { name: "FIFA Club World Cup" },
     match_date: "2024-01-18T21:00:00Z",
     status: "SCHEDULED",
     ai_confidence: 73
   },
   {
-    id: "5",
-    home_team: { name: "Juventus", logo: "/placeholder.svg" },
-    away_team: { name: "AC Milan", logo: "/placeholder.svg" },
-    league: { name: "Serie A" },
+    id: "19338812",
+    home_team: { name: "Real Madrid", logo: "https://cdn.sportmonks.com/images/soccer/teams/29/541.png" },
+    away_team: { name: "Chelsea", logo: "https://cdn.sportmonks.com/images/soccer/teams/18/498.png" },
+    league: { name: "FIFA Club World Cup" },
     match_date: "2024-01-19T20:45:00Z",
     status: "SCHEDULED",
     ai_confidence: 79
   },
   {
-    id: "6",
-    home_team: { name: "Flamengo", logo: "/placeholder.svg" },
-    away_team: { name: "Palmeiras", logo: "/placeholder.svg" },
-    league: { name: "Brasileirão" },
+    id: "19338813",
+    home_team: { name: "Manchester City", logo: "https://cdn.sportmonks.com/images/soccer/teams/17/481.png" },
+    away_team: { name: "Liverpool", logo: "https://cdn.sportmonks.com/images/soccer/teams/14/494.png" },
+    league: { name: "FIFA Club World Cup" },
     match_date: "2024-01-20T16:00:00Z",
     status: "SCHEDULED",
     ai_confidence: 88
@@ -177,15 +177,27 @@ export default function AnalysisPage() {
                 {/* Teams */}
                 <div className="text-center">
                   <div className="flex items-center justify-center space-x-4 mb-3">
-                    <div className="text-center">
-                      <div className="w-8 h-8 bg-muted rounded-full mx-auto mb-1"></div>
-                      <span className="text-sm font-medium">{fixture.home_team.name}</span>
+                                      <div className="text-center">
+                    <div className="w-8 h-8 rounded-full mx-auto mb-1 overflow-hidden border">
+                      <img 
+                        src={fixture.home_team.logo} 
+                        alt={fixture.home_team.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <span className="font-bold text-muted-foreground">VS</span>
-                    <div className="text-center">
-                      <div className="w-8 h-8 bg-muted rounded-full mx-auto mb-1"></div>
-                      <span className="text-sm font-medium">{fixture.away_team.name}</span>
+                    <span className="text-sm font-medium">{fixture.home_team.name}</span>
+                  </div>
+                  <span className="font-bold text-muted-foreground">VS</span>
+                  <div className="text-center">
+                    <div className="w-8 h-8 rounded-full mx-auto mb-1 overflow-hidden border">
+                      <img 
+                        src={fixture.away_team.logo} 
+                        alt={fixture.away_team.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
+                    <span className="text-sm font-medium">{fixture.away_team.name}</span>
+                  </div>
                   </div>
                 </div>
                 
