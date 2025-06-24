@@ -1,15 +1,31 @@
 "use client"
 
-import { Toaster as SonnerToaster, type ToasterProps } from "sonner"
+import { useTheme } from "next-themes"
+import { Toaster as Sonner } from "sonner"
 
-/**
- * Wrapper do componente Toaster do pacote `sonner`, seguindo
- * a convenção de pastas do shadcn/ui (`@/components/ui/*`).
- *
- * Exemplo de uso:
- *   import { toast } from "sonner"
- *   toast.success("Olá, mundo!")
- */
-export function Toaster(props: ToasterProps) {
-  return <SonnerToaster {...props} />
+type ToasterProps = React.ComponentProps<typeof Sonner>
+
+const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme = "system" } = useTheme()
+
+  return (
+    <Sonner
+      theme={theme as ToasterProps["theme"]}
+      className="toaster group"
+      toastOptions={{
+        classNames: {
+          toast:
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-muted-foreground",
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+          cancelButton:
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+        },
+      }}
+      {...props}
+    />
+  )
 }
+
+export { Toaster }

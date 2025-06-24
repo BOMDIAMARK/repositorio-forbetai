@@ -1,4 +1,3 @@
-// Tipos para a listagem de próximos jogos (simplificado)
 export interface UpcomingFixtureForAnalysis {
   id: number
   name: string // "Time A vs Time B"

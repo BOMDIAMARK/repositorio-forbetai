@@ -1,4 +1,3 @@
-// Tipos para a nova estrutura de predições
 export interface Prediction {
   id: string
   teamA: { name: string; logoUrl?: string; shortName?: string }

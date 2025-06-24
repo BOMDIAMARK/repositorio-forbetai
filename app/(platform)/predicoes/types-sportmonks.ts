@@ -1,5 +1,3 @@
-// Types based on SportMonks API structure and user's example
-
 interface SportMonksTeamInfo {
   id: number
   name: string

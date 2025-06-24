@@ -1,4 +1,3 @@
-// Função para calcular o tempo de jogo (simplificada)
 export function getCurrentMinute(fixture: import("@/app/(platform)/ao-vivo/types").LiveScoreFixture): string | null {
   if (!fixture.state || fixture.state.developer_name !== "LIVE" || !fixture.periods) {
     return fixture.state?.short_name || null
