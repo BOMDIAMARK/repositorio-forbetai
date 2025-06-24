@@ -1,4 +1,6 @@
 // Sistema Multi-API para maximizar disponibilidade e minimizar custos
+import { cacheManager, CACHE_CONFIG } from './redis-cache'
+
 export interface APIProvider {
   name: string
   priority: number // 1 = mais alto, 5 = mais baixo
@@ -96,34 +98,7 @@ export const API_PROVIDERS: APIProvider[] = [
   }
 ]
 
-// Cache inteligente para otimizar requisições
-class APICache {
-  private cache = new Map<string, { data: any, timestamp: number, ttl: number }>()
-
-  set(key: string, data: any, ttlSeconds: number = 300) {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl: ttlSeconds * 1000
-    })
-  }
-
-  get(key: string): any | null {
-    const cached = this.cache.get(key)
-    if (!cached) return null
-
-    if (Date.now() - cached.timestamp > cached.ttl) {
-      this.cache.delete(key)
-      return null
-    }
-
-    return cached.data
-  }
-
-  clear() {
-    this.cache.clear()
-  }
-}
+// Cache Redis integrado - removido cache simples em favor do Redis
 
 // Rate limiter para cada API
 class RateLimiter {
@@ -155,20 +130,20 @@ class RateLimiter {
 
 // Cliente multi-API principal
 export class MultiAPIClient {
-  private cache = new APICache()
   private rateLimiter = new RateLimiter()
   private providers: APIProvider[]
 
   constructor() {
     this.providers = API_PROVIDERS.sort((a, b) => a.priority - b.priority)
+    console.log(`🚀 MultiAPIClient inicializado com cache: ${cacheManager.getCacheInfo().type}`)
   }
 
   // Buscar fixtures com fallback automático
   async fetchFixtures(date: string): Promise<UnifiedFixture[]> {
-    const cacheKey = `fixtures_${date}`
-    const cached = this.cache.get(cacheKey)
+    // Verificar cache Redis primeiro
+    const cached = await cacheManager.getFixtures(date)
     if (cached) {
-      console.log(`📋 Cache hit para fixtures ${date}`)
+      console.log(`📋 Cache Redis hit para fixtures ${date} (${cached.length} fixtures)`)
       return cached
     }
 
@@ -205,7 +180,10 @@ export class MultiAPIClient {
         if (fixtures.length > 0) {
           console.log(`✅ ${provider.name}: ${fixtures.length} fixtures encontradas`)
           this.rateLimiter.recordRequest(provider.name)
-          this.cache.set(cacheKey, fixtures, 300) // Cache por 5 minutos
+          
+          // Salvar no cache Redis com TTL apropriado
+          await cacheManager.setFixtures(date, fixtures, provider.name)
+          
           return fixtures
         }
 

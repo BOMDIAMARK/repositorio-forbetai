@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { multiApiClient } from '@/lib/multi-api-client'
+import { addCacheHeaders, CACHE_CONFIG } from '@/lib/redis-cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +22,8 @@ export async function GET(request: NextRequest) {
     // Obter status dos providers para debug
     const providerStatus = multiApiClient.getProviderStatus()
     
+    const cacheHeaders = addCacheHeaders(CACHE_CONFIG.fixturesTTL)
+    
     return NextResponse.json({
       success: true,
       data: fixtures,
@@ -28,8 +31,14 @@ export async function GET(request: NextRequest) {
         date,
         count: fixtures.length,
         providers: providerStatus,
-        cached: false // Implementar lógica de cache se necessário
+        cache: {
+          type: 'Redis/Memory',
+          ttl: CACHE_CONFIG.fixturesTTL,
+          headers: cacheHeaders
+        }
       }
+    }, {
+      headers: cacheHeaders
     })
 
   } catch (error) {
