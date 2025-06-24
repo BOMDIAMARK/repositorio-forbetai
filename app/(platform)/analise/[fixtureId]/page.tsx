@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useFixtureUpdates, usePredictionsUpdates } from "@/hooks/use-real-time-updates"
 import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -61,29 +62,40 @@ export default function DetailedAnalysisPage() {
   const router = useRouter()
   const fixtureId = params.fixtureId as string
   
-  const [fixtureDetails, setFixtureDetails] = useState<DetailedFixtureAnalysis | null>(null)
   const [h2hData, setH2hData] = useState<H2HRecord | null>(null)
   const [homeTeamForm, setHomeTeamForm] = useState<TeamForm | null>(null)
   const [awayTeamForm, setAwayTeamForm] = useState<TeamForm | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [initialLoading, setInitialLoading] = useState(true)
+  
+  // Real-time hooks
+  const { 
+    data: fixtureData, 
+    loading: fixtureLoading, 
+    error: fixtureError,
+    status: fixtureStatus,
+    manualRefresh: refreshFixture
+  } = useFixtureUpdates(fixtureId)
+  
+  const { 
+    data: predictionsData,
+    status: predictionsStatus,
+    manualRefresh: refreshPredictions
+  } = usePredictionsUpdates(fixtureId)
+  
+  // Combine fixture and predictions data
+  const fixtureDetails = fixtureData?.data ? {
+    ...fixtureData.data,
+    predictions: predictionsData?.data?.predictions || fixtureData.data.predictions || []
+  } : null
+  
+  const loading = initialLoading || fixtureLoading
+  const error = fixtureError
 
   useEffect(() => {
-    async function loadAnalysisData() {
+    async function loadH2HAndFormData() {
       if (!fixtureId) return
       
-      setLoading(true)
-      setError(null)
-      
       try {
-        // Load fixture details
-        const fixtureResponse = await fetch(`/api/analises/fixture/${fixtureId}`)
-        if (!fixtureResponse.ok) {
-          throw new Error('Falha ao carregar detalhes da partida')
-        }
-        const fixtureResult = await fixtureResponse.json()
-        setFixtureDetails(fixtureResult.data)
-
         // Simulate H2H and form data loading
         await new Promise(resolve => setTimeout(resolve, 1000))
         
@@ -135,14 +147,13 @@ export default function DetailedAnalysisPage() {
         })
 
       } catch (err: any) {
-        console.error('Erro ao carregar dados da análise:', err)
-        setError(err.message || 'Erro ao carregar análise')
+        console.error('Erro ao carregar dados H2H:', err)
       } finally {
-        setLoading(false)
+        setInitialLoading(false)
       }
     }
 
-    loadAnalysisData()
+    loadH2HAndFormData()
   }, [fixtureId])
 
   const formatDateTime = (isoString: string) => {
@@ -232,10 +243,34 @@ export default function DetailedAnalysisPage() {
           <ArrowLeft className="h-4 w-4" />
           Voltar para Análises
         </Button>
-        <Badge variant="outline" className="bg-gradient-to-r from-primary-forbet/10 to-secondary-forbet/10">
-          <Zap className="h-3 w-3 mr-1" />
-          Análise IA Completa
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="bg-gradient-to-r from-primary-forbet/10 to-secondary-forbet/10">
+            <Zap className="h-3 w-3 mr-1" />
+            Análise IA Completa
+          </Badge>
+          
+          {/* Real-time status indicator */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {fixtureStatus.isUpdating || predictionsStatus.isUpdating ? (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span>Atualizando...</span>
+              </div>
+            ) : (
+              fixtureStatus.lastUpdated && (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>
+                    Atualizado às {fixtureStatus.lastUpdated.toLocaleTimeString('pt-BR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Match Header */}
@@ -350,63 +385,119 @@ export default function DetailedAnalysisPage() {
         <TabsContent value="predictions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Predições SportMonks
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Predições SportMonks
+                </div>
+                <div className="flex items-center gap-2">
+                  {predictionsStatus.isUpdating && (
+                    <div className="w-4 h-4 border-2 border-primary-forbet border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={refreshPredictions}
+                    className="h-8 w-8 p-0"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </Button>
+                </div>
               </CardTitle>
               <CardDescription>
                 Análise baseada em dados estatísticos e algoritmos avançados
+                {predictionsStatus.lastUpdated && (
+                  <span className="block text-xs mt-1">
+                    Última atualização: {predictionsStatus.lastUpdated.toLocaleTimeString('pt-BR')}
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {fixtureDetails.predictions && fixtureDetails.predictions.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mercado</TableHead>
-                      <TableHead>Casa</TableHead>
-                      <TableHead>Empate</TableHead>
-                      <TableHead>Visitante</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fixtureDetails.predictions.map((prediction: any) => {
-                      const predData = prediction.predictions
-                      const predType = prediction.type?.name || "Desconhecido"
-                      
-                      if (predType === "1X2" && predData.home !== undefined) {
-                        return (
-                          <TableRow key={prediction.id}>
-                            <TableCell className="font-medium">{predType}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span>{predData.home?.toFixed(1)}%</span>
-                                <Progress value={predData.home} className="w-16 h-2" />
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span>{predData.draw?.toFixed(1)}%</span>
-                                <Progress value={predData.draw} className="w-16 h-2" />
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span>{predData.away?.toFixed(1)}%</span>
-                                <Progress value={predData.away} className="w-16 h-2" />
-                              </div>
-                            </TableCell>
+                <div className="space-y-6">
+                  {/* Main 1X2 Predictions */}
+                  {fixtureDetails.predictions.find((p: any) => p.type?.name === "1X2") && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Resultado Final (1X2)</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Casa</TableHead>
+                            <TableHead>Empate</TableHead>
+                            <TableHead>Visitante</TableHead>
                           </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {fixtureDetails.predictions.filter((p: any) => p.type?.name === "1X2").map((prediction: any) => {
+                            const predData = prediction.predictions
+                            return (
+                              <TableRow key={prediction.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{(predData.home * 100)?.toFixed(1)}%</span>
+                                    <Progress value={predData.home * 100} className="w-20 h-3" />
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{(predData.draw * 100)?.toFixed(1)}%</span>
+                                    <Progress value={predData.draw * 100} className="w-20 h-3" />
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{(predData.away * 100)?.toFixed(1)}%</span>
+                                    <Progress value={predData.away * 100} className="w-20 h-3" />
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                  
+                  {/* Other Predictions */}
+                  <div>
+                    <h4 className="font-semibold mb-3">Outras Predições</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {fixtureDetails.predictions.filter((p: any) => p.type?.name !== "1X2").map((prediction: any) => {
+                        const predData = prediction.predictions
+                        const predType = prediction.type?.name || "Predição"
+                        
+                        return (
+                          <Card key={prediction.id} className="p-4">
+                            <h5 className="font-medium mb-2">{predType}</h5>
+                            <div className="space-y-2 text-sm">
+                              {Object.entries(predData).map(([key, value]) => (
+                                <div key={key} className="flex justify-between">
+                                  <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                                  <span className="font-medium">
+                                    {typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : String(value)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </Card>
                         )
-                      }
-                      return null
-                    })}
-                  </TableBody>
-                </Table>
+                      })}
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <p className="text-muted-foreground text-center py-8">
-                  Predições não disponíveis para esta partida
-                </p>
+                <div className="text-center py-8">
+                  <Target className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">
+                    Predições não disponíveis para esta partida
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    As predições podem não estar disponíveis para jogos muito próximos ou já finalizados
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>

@@ -8,42 +8,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Search, BarChartHorizontalBig, Loader2, AlertTriangle, Brain } from "lucide-react"
+import { Search, BarChartHorizontalBig, Loader2, AlertTriangle, Brain, Activity } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { useRealTimeUpdates } from "@/hooks/use-real-time-updates"
 
 export default function AnalisesPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [upcomingFixtures, setUpcomingFixtures] = useState<UpcomingFixtureForAnalysis[]>([])
-  const [loadingUpcoming, setLoadingUpcoming] = useState(true)
-  const [errorUpcoming, setErrorUpcoming] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedFixture, setSelectedFixture] = useState<{ id: number; name: string } | null>(null)
 
-  useEffect(() => {
-    async function loadUpcomingFixtures() {
-      setLoadingUpcoming(true)
-      setErrorUpcoming(null)
-      try {
-        const response = await fetch("/api/analises/upcoming-fixtures")
-        if (!response.ok) {
-          const errorResult = await response
-            .json()
-            .catch(() => ({ error: "Erro desconhecido ao buscar próximos jogos." }))
-          throw new Error(errorResult.error || "Falha ao buscar próximos jogos.")
-        }
-        const result = await response.json()
-        setUpcomingFixtures(result.data || [])
-      } catch (err: any) {
-        console.error("Erro ao buscar próximos jogos:", err)
-        setErrorUpcoming(err.message)
-        setUpcomingFixtures([])
-      } finally {
-        setLoadingUpcoming(false)
-      }
-    }
-    loadUpcomingFixtures()
-  }, [])
+  // Use real-time updates for upcoming fixtures
+  const { 
+    data: upcomingData, 
+    loading: loadingUpcoming, 
+    error: errorUpcoming,
+    status,
+    manualRefresh
+  } = useRealTimeUpdates<any>({
+    endpoint: "/api/analises/upcoming-fixtures",
+    interval: 60000, // Update every minute for upcoming fixtures
+    enabled: true
+  })
+
+  const upcomingFixtures = upcomingData?.data || []
 
   const handleSelectFixture = useCallback((fixtureId: number, fixtureName: string) => {
     setSelectedFixture({ id: fixtureId, name: fixtureName })
@@ -51,7 +39,7 @@ export default function AnalisesPage() {
   }, [])
 
   const filteredUpcomingFixtures = upcomingFixtures.filter(
-    (fixture) =>
+    (fixture: any) =>
       fixture.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       fixture.leagueName.toLowerCase().includes(searchTerm.toLowerCase()),
   )
@@ -61,10 +49,27 @@ export default function AnalisesPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold md:text-3xl">Análise de Partidas</h1>
-          <p className="text-muted-foreground">
-            Selecione uma partida abaixo para ver uma análise detalhada e predições.
-          </p>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>Selecione uma partida abaixo para ver uma análise detalhada e predições.</span>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                status.isUpdating ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'
+              }`} />
+              <span>
+                {status.isUpdating ? 'Atualizando...' : 'Atualizado'}
+              </span>
+              {status.lastUpdated && (
+                <span className="text-xs">
+                  ({status.lastUpdated.toLocaleTimeString('pt-BR')})
+                </span>
+              )}
+            </div>
+          </div>
         </div>
+        <Button onClick={manualRefresh} variant="outline" size="sm" disabled={status.isUpdating}>
+          {status.isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
+          Atualizar Lista
+        </Button>
       </div>
 
       <Card>
@@ -98,7 +103,7 @@ export default function AnalisesPage() {
           )}
           {!loadingUpcoming && !errorUpcoming && filteredUpcomingFixtures.length > 0 && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredUpcomingFixtures.map((fixture) => (
+              {filteredUpcomingFixtures.map((fixture: any) => (
                 <Card
                   key={fixture.id}
                   className="cursor-pointer transition-all hover:shadow-md hover:border-primary-forbet"

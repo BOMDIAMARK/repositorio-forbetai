@@ -4,50 +4,29 @@ import { useEffect, useState, useCallback } from "react"
 import type { LiveScoreFixture } from "./types"
 import { LiveGameCard } from "@/components/live/live-game-card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, WifiOff, ListChecks } from "lucide-react"
+import { Loader2, WifiOff, ListChecks, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-const POLLING_INTERVAL = 30000 // 30 segundos
+import { useLiveScores } from "@/hooks/use-real-time-updates"
 
 export default function AoVivoPage() {
-  const [liveScores, setLiveScores] = useState<LiveScoreFixture[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  // Use the real-time hook for live scores
+  const { 
+    data: liveScoresData, 
+    loading, 
+    error, 
+    status,
+    manualRefresh 
+  } = useLiveScores()
 
-  const getLiveScores = useCallback(async (isInitialLoad = false) => {
-    if (isInitialLoad) setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch("/api/live-scores")
-      if (!res.ok) throw new Error("Erro ao buscar jogos ao vivo.")
-      const response = await res.json()
-      
-      // Verificar se data existe e é um array
-      const data = response.data || []
-      const sortedData = Array.isArray(data) ? data.sort(
-        (a: any, b: any) =>
-          a.league_id - b.league_id || new Date(a.starting_at).getTime() - new Date(b.starting_at).getTime(),
-      ) : []
-      
-      setLiveScores(sortedData)
-      setLastUpdated(new Date())
-    } catch (e: any) {
-      setError(e.message || "Erro desconhecido.")
-    } finally {
-      if (isInitialLoad) setLoading(false)
-    }
-  }, [])
+  // Process the live scores data
+  const liveScores = liveScoresData?.data ? 
+    Array.isArray(liveScoresData.data) ? liveScoresData.data.sort(
+      (a: any, b: any) =>
+        a.league_id - b.league_id || new Date(a.starting_at).getTime() - new Date(b.starting_at).getTime(),
+    ) : []
+    : []
 
-  useEffect(() => {
-    getLiveScores(true) // Carga inicial
-
-    const intervalId = setInterval(() => {
-      getLiveScores()
-    }, POLLING_INTERVAL)
-
-    return () => clearInterval(intervalId) // Limpa o intervalo ao desmontar o componente
-  }, [getLiveScores])
+  const lastUpdated = status.lastUpdated
 
   if (loading) {
     return (
@@ -66,7 +45,7 @@ export default function AoVivoPage() {
         <AlertTitle>Erro de Conexão</AlertTitle>
         <AlertDescription>
           {error}
-          <Button onClick={() => getLiveScores(true)} variant="link" className="mt-2 p-0 h-auto">
+          <Button onClick={manualRefresh} variant="link" className="mt-2 p-0 h-auto">
             Tentar novamente
           </Button>
         </AlertDescription>
@@ -79,20 +58,37 @@ export default function AoVivoPage() {
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold md:text-3xl">Jogos Ao Vivo</h1>
-          <p className="text-sm text-muted-foreground">
-            Acompanhe as partidas em andamento em tempo real.
-            {lastUpdated && ` Atualizado às ${lastUpdated.toLocaleTimeString("pt-BR")}.`}
-          </p>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>Acompanhe as partidas em andamento em tempo real.</span>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                status.isUpdating ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'
+              }`} />
+              <span>
+                {status.isUpdating ? 'Atualizando...' : 'Tempo Real'}
+              </span>
+              {lastUpdated && (
+                <span className="text-xs">
+                  (atualizado às {lastUpdated.toLocaleTimeString("pt-BR")})
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <Button onClick={() => getLiveScores(true)} variant="outline" size="sm" disabled={loading}>
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ListChecks className="mr-2 h-4 w-4" />}
-          Atualizar Agora
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={manualRefresh} variant="outline" size="sm" disabled={status.isUpdating}>
+            {status.isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
+            Atualizar Agora
+          </Button>
+          <div className="text-xs text-muted-foreground">
+            A cada 15s
+          </div>
+        </div>
       </div>
 
       {liveScores.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-          {liveScores.map((fixture) => (
+          {liveScores.map((fixture: any) => (
             <LiveGameCard key={fixture.id} fixture={fixture} />
           ))}
         </div>
