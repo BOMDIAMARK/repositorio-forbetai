@@ -304,3 +304,126 @@ export async function fetchFixtureOdds(fixtureId: number): Promise<any[] | null>
     return null
   }
 }
+
+// Função para buscar predições de uma fixture (se disponível no plano)
+export async function fetchFixturePredictions(fixtureId: number): Promise<any | null> {
+  console.log(`🔮 Buscando predições da fixture: ${fixtureId}`)
+  
+  try {
+    const endpoint = `/football/fixtures/${fixtureId}?include=predictions`
+    const response = await fetchSportMonksApi<{ data: any }>(endpoint, true)
+    
+    if (response.data && response.data.predictions) {
+      console.log(`🔮 Predições carregadas para fixture ${fixtureId}`)
+      return response.data.predictions
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.warn(`⚠️ Predições não disponíveis para fixture ${fixtureId}:`, error)
+    return null
+  }
+}
+
+// Função para buscar odds detalhadas com múltiplas casas
+export async function fetchFixtureOddsDetailed(fixtureId: number): Promise<any | null> {
+  console.log(`💰 Buscando odds detalhadas da fixture: ${fixtureId}`)
+  
+  try {
+    const endpoint = `/football/odds/fixtures/${fixtureId}?include=bookmaker,market`
+    const response = await fetchSportMonksApi<{ data: any[] }>(endpoint, true)
+    
+    if (response.data && response.data.length > 0) {
+      console.log(`💰 ${response.data.length} odds detalhadas carregadas para fixture ${fixtureId}`)
+      return response.data
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.warn(`⚠️ Odds detalhadas não disponíveis para fixture ${fixtureId}:`, error)
+    return null
+  }
+}
+
+// Função para buscar dados enriquecidos de uma fixture (logos, estatísticas completas)
+export async function fetchFixtureEnrichedData(fixtureId: number): Promise<any | null> {
+  console.log(`📊 Buscando dados enriquecidos da fixture: ${fixtureId}`)
+  
+  try {
+    // Includes extensivos para dados completos
+    const includes = [
+      'participants',
+      'league',
+      'season',
+      'round',
+      'stage',
+      'group',
+      'venue',
+      'statistics',
+      'lineups',
+      'formations',
+      'scores',
+      'state',
+      'periods'
+    ].join(',')
+    
+    const endpoint = `/football/fixtures/${fixtureId}?include=${includes}`
+    const response = await fetchSportMonksApi<{ data: any }>(endpoint, true)
+    
+    if (response.data) {
+      console.log(`📊 Dados enriquecidos carregados para fixture ${fixtureId}`)
+      return response.data
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.warn(`⚠️ Dados enriquecidos não disponíveis para fixture ${fixtureId}:`, error)
+    return null
+  }
+}
+
+// Função para buscar múltiplas predições por data
+export async function fetchPredictionsByDate(date: string): Promise<any[]> {
+  console.log(`🔮 Buscando predições para data: ${date}`)
+  
+  try {
+    const endpoint = `/football/predictions/probabilities/fixtures/date/${date}`
+    const response = await fetchSportMonksApi<{ data: any[] }>(endpoint, true)
+    
+    const predictions = response.data || []
+    console.log(`🔮 Encontradas ${predictions.length} predições para ${date}`)
+    
+    return predictions
+    
+  } catch (error) {
+    console.error(`❌ Erro ao buscar predições para ${date}:`, error)
+    return []
+  }
+}
+
+// Função para buscar logos de times e liga
+export async function fetchTeamLogos(teamIds: number[]): Promise<any[]> {
+  console.log(`🎨 Buscando logos para times: ${teamIds.join(', ')}`)
+  
+  try {
+    const promises = teamIds.map(teamId => 
+      fetchSportMonksApi<{ data: any }>(`/football/teams/${teamId}`)
+    )
+    
+    const results = await Promise.allSettled(promises)
+    const teams = results
+      .filter(result => result.status === 'fulfilled')
+      .map(result => (result as any).value.data)
+      .filter(team => team)
+    
+    console.log(`🎨 ${teams.length} logos de times carregados`)
+    return teams
+    
+  } catch (error) {
+    console.error(`❌ Erro ao buscar logos dos times:`, error)
+    return []
+  }
+}

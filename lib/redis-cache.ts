@@ -6,13 +6,19 @@ export interface CacheConfig {
   fixturesTTL: number // TTL para fixtures (mais longo)
   validationTTL: number // TTL para validação de APIs (mais curto)
   liveDataTTL: number // TTL para dados ao vivo (muito curto)
+  oddsTTL: number // TTL para odds (volátil)
+  predictionsTTL: number // TTL para predições (estável)
+  enrichedDataTTL: number // TTL para dados enriquecidos (muito estável)
 }
 
 export const CACHE_CONFIG: CacheConfig = {
   defaultTTL: 300, // 5 minutos
   fixturesTTL: 600, // 10 minutos
   validationTTL: 180, // 3 minutos
-  liveDataTTL: 30 // 30 segundos
+  liveDataTTL: 30, // 30 segundos
+  oddsTTL: 600, // 10 minutos (odds mudam frequentemente)
+  predictionsTTL: 1800, // 30 minutos (algoritmos são mais estáveis)
+  enrichedDataTTL: 3600 // 1 hora (dados estruturais)
 }
 
 // Cache keys com prefixos organizados
@@ -26,7 +32,15 @@ export const CACHE_KEYS = {
   apiStatus: () => 
     'api:status',
   rateLimit: (provider: string) => 
-    `ratelimit:${provider}`
+    `ratelimit:${provider}`,
+  odds: (fixtureId: number | string) => 
+    `odds:detailed:${fixtureId}`,
+  predictions: (fixtureId?: number | string, date?: string) => 
+    fixtureId ? `predictions:fixture:${fixtureId}` : `predictions:${date}`,
+  enriched: (fixtureId: number | string) => 
+    `enriched:fixture:${fixtureId}`,
+  teamLogos: (teamIds: number[]) => 
+    `teams:logos:${teamIds.sort().join(',')}`
 }
 
 // Interface unificada para cache
@@ -371,6 +385,51 @@ export class CacheManager {
     }
     
     console.log('🧹 Cache de validações invalidado')
+  }
+
+  // Cache para odds detalhadas com TTL otimizado
+  async getOdds(fixtureId: number | string): Promise<any | null> {
+    const key = CACHE_KEYS.odds(fixtureId)
+    return await this.client.get<any>(key)
+  }
+
+  async setOdds(fixtureId: number | string, odds: any): Promise<void> {
+    const key = CACHE_KEYS.odds(fixtureId)
+    await this.client.set(key, odds, CACHE_CONFIG.oddsTTL)
+  }
+
+  // Cache para predições com TTL longo
+  async getPredictions(fixtureId?: number | string, date?: string): Promise<any | null> {
+    const key = CACHE_KEYS.predictions(fixtureId, date)
+    return await this.client.get<any>(key)
+  }
+
+  async setPredictions(predictions: any, fixtureId?: number | string, date?: string): Promise<void> {
+    const key = CACHE_KEYS.predictions(fixtureId, date)
+    await this.client.set(key, predictions, CACHE_CONFIG.predictionsTTL)
+  }
+
+  // Cache para dados enriquecidos com TTL muito longo
+  async getEnrichedData(fixtureId: number | string): Promise<any | null> {
+    const key = CACHE_KEYS.enriched(fixtureId)
+    return await this.client.get<any>(key)
+  }
+
+  async setEnrichedData(fixtureId: number | string, data: any): Promise<void> {
+    const key = CACHE_KEYS.enriched(fixtureId)
+    await this.client.set(key, data, CACHE_CONFIG.enrichedDataTTL)
+  }
+
+  // Cache para logos de times (dados muito estáveis)
+  async getTeamLogos(teamIds: number[]): Promise<any[] | null> {
+    const key = CACHE_KEYS.teamLogos(teamIds)
+    return await this.client.get<any[]>(key)
+  }
+
+  async setTeamLogos(teamIds: number[], logos: any[]): Promise<void> {
+    const key = CACHE_KEYS.teamLogos(teamIds)
+    // Logos raramente mudam, TTL longo
+    await this.client.set(key, logos, 86400) // 24 horas
   }
 
   // Status do cache
