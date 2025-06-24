@@ -77,7 +77,7 @@ SPORTMONKS_BASE_URL=https://api.sportmonks.com/v3
 
 ## 📋 **Configuração Completa**
 
-### Arquivo `.env.local` recomendado:
+### Arquivo `.env.local` atual:
 ```bash
 # Multi-API Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -85,13 +85,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # TheSportsDB (Gratuita - não precisa de key)
 # Funciona automaticamente
 
-# FootballData (Opcional - para mais cobertura)
-FOOTBALL_DATA_API_KEY=sua_chave_football_data
+# FootballData (✅ ATIVADO)
+FOOTBALL_DATA_API_KEY=42a215c86ce3471d89e7cb6a8e12db6a
 
-# APIFootball (Recomendado - odds gratuitas)
-API_FOOTBALL_KEY=sua_chave_rapidapi
+# APIFootball (Opcional - para odds)
+# API_FOOTBALL_KEY=sua_chave_rapidapi
 
-# SportMonks (Existing - fallback premium)
+# SportMonks (✅ CONFIGURADO - fallback premium)
 SPORTMONKS_API_KEY=sua_chave_sportmonks
 SPORTMONKS_BASE_URL=https://api.sportmonks.com/v3
 ```
@@ -138,10 +138,11 @@ SportMonks apenas = €100+/mês
 
 ## 🚀 **Implementação Gradual**
 
-### **Fase 1: Só Gratuitas** (Atual)
-- TheSportsDB funcionando
-- Zero custos adicionais
-- Cobertura básica garantida
+### **Fase 1: Gratuitas + Baixo Custo** (Atual) ✅
+- TheSportsDB funcionando (gratuita)
+- FootballData ativado (€29/mês)
+- Sistema de validação automática
+- Fallback inteligente funcionando
 
 ### **Fase 2: Adicionar APIFootball**
 - Odds em tempo real
@@ -152,20 +153,48 @@ SportMonks apenas = €100+/mês
 - FootballData para mais ligas
 - Custo adicional: €29/mês
 
-## 🔍 **Monitoramento**
+## 🔍 **Monitoramento e Validação**
+
+### **Sistema de Validação Automática** ⚡
+Endpoint: `/api/test-validation`
+```bash
+curl https://sua-app.vercel.app/api/test-validation
+```
+
+**Resultado atual:**
+```json
+{
+  "success": true,
+  "results": [
+    {"name": "TheSportsDB", "isValid": true},
+    {"name": "FootballData", "isValid": true},
+    {"name": "APIFootball", "isValid": false, "error": "Token não configurado"},
+    {"name": "SportMonks", "isValid": true}
+  ]
+}
+```
 
 ### **Dashboard de Status**
 O sistema exibe automaticamente:
-- ✅ Quais APIs estão ativas
+- ✅ Quais APIs estão ativas  
 - 💰 Custo de cada fonte
 - ⚡ Status do rate limiting
 - 📊 Origem dos dados
+- 🔍 Validação de tokens em tempo real
 
 ### **Logs Detalhados**
 ```
+🔍 Status das APIs configuradas:
+✅ TheSportsDB 
+✅ FootballData (140 restantes)
+❌ APIFootball - Token não configurado
+✅ SportMonks
+
 🔄 Tentando buscar fixtures via TheSportsDB...
-✅ TheSportsDB: 15 fixtures encontradas
-💰 Usando fonte gratuita
+🔍 TheSportsDB: 1 eventos totais, 0 válidos para 2025-03-01
+🔄 Tentando buscar fixtures via FootballData...
+✅ FootballData: 25 fixtures encontradas
+💰 Usando fonte de baixo custo
 ```
 
 ## 🛠️ **Desenvolvimento**
