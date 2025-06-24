@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { multiApiClient } from '@/lib/multi-api-client'
+import { fetchFixturesByDate } from '@/lib/sportmonks-api-client'
 import { addCacheHeaders, CACHE_CONFIG } from '@/lib/redis-cache'
 
 export async function GET(request: NextRequest) {
@@ -14,13 +14,10 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log(`🎯 Buscando fixtures para ${date} via sistema multi-API`)
+    console.log(`🎯 Buscando fixtures para ${date} via SportMonks API`)
     
-    // Buscar fixtures com fallback automático
-    const fixtures = await multiApiClient.fetchFixtures(date)
-    
-    // Obter status dos providers para debug
-    const providerStatus = multiApiClient.getProviderStatus()
+    // Buscar fixtures diretamente do SportMonks
+    const fixtures = await fetchFixturesByDate(date)
     
     const cacheHeaders = addCacheHeaders(CACHE_CONFIG.fixturesTTL)
     
@@ -30,7 +27,7 @@ export async function GET(request: NextRequest) {
       meta: {
         date,
         count: fixtures.length,
-        providers: providerStatus,
+        provider: 'SportMonks',
         cache: {
           type: 'Redis/Memory',
           ttl: CACHE_CONFIG.fixturesTTL,
@@ -42,7 +39,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Erro no endpoint multi-API:', error)
+    console.error('❌ Erro no endpoint SportMonks:', error)
     
     return NextResponse.json({
       success: false,

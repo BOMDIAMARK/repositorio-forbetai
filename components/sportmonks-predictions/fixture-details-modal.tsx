@@ -50,9 +50,9 @@ export function FixtureDetailsModal({ fixture, isOpen, onClose }: FixtureDetails
     setError(null)
 
     try {
-      // Usar originalId se disponível (para fixtures do multi-API), senão usar id
-      const fixtureId = (fixture as any).originalId || fixture.id
-      console.log(`🔍 Buscando detalhes para fixture: ${fixtureId} (original: ${fixture.id})`)
+      // Usar o ID da fixture do SportMonks
+      const fixtureId = fixture.id
+      console.log(`🔍 Buscando detalhes para fixture: ${fixtureId}`)
       const res = await fetch(`/api/sportmonks/fixtures/${fixtureId}`)
       
       if (!res.ok) {
