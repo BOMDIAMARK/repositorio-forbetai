@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
-import type { UpcomingFixtureForAnalysis, DetailedFixtureAnalysis } from "./types"
-import { AnalysisDetailsDisplay } from "@/components/analysis/analysis-details-display"
+import type { UpcomingFixtureForAnalysis } from "./types"
+import { AIAnalysisModal } from "@/components/analysis/ai-analysis-modal"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Search, BarChartHorizontalBig, Loader2, AlertTriangle } from "lucide-react"
+import { Search, BarChartHorizontalBig, Loader2, AlertTriangle, Brain } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
@@ -16,11 +16,9 @@ export default function AnalisesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [upcomingFixtures, setUpcomingFixtures] = useState<UpcomingFixtureForAnalysis[]>([])
   const [loadingUpcoming, setLoadingUpcoming] = useState(true)
-  const [selectedFixtureId, setSelectedFixtureId] = useState<number | null>(null)
-  const [fixtureDetails, setFixtureDetails] = useState<DetailedFixtureAnalysis | null>(null)
-  const [loadingDetails, setLoadingDetails] = useState(false)
-  const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const [errorUpcoming, setErrorUpcoming] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedFixture, setSelectedFixture] = useState<{ id: number; name: string } | null>(null)
 
   useEffect(() => {
     async function loadUpcomingFixtures() {
@@ -47,37 +45,9 @@ export default function AnalisesPage() {
     loadUpcomingFixtures()
   }, [])
 
-  const handleSelectFixture = useCallback(async (fixtureId: number) => {
-    setSelectedFixtureId(fixtureId)
-    setLoadingDetails(true)
-    setErrorDetails(null)
-    setFixtureDetails(null)
-
-    try {
-      // Buscar detalhes da fixture da SportMonks
-      const fixtureDetailsResponse = await fetch(`/api/analises/fixture/${fixtureId}`)
-      if (!fixtureDetailsResponse.ok) {
-        const errorResult = await fixtureDetailsResponse
-          .json()
-          .catch(() => ({ error: "Erro desconhecido ao buscar detalhes da partida." }))
-        throw new Error(
-          errorResult.error ||
-            `Falha ao buscar detalhes da partida (ID: ${fixtureId}). Status: ${fixtureDetailsResponse.status}`,
-        )
-      }
-      const fixtureResult = await fixtureDetailsResponse.json()
-
-      if (fixtureResult.data) {
-        setFixtureDetails(fixtureResult.data)
-      } else {
-        setErrorDetails("Não foram encontrados detalhes para a partida selecionada.")
-      }
-    } catch (error: any) {
-      console.error("Erro ao buscar dados da partida:", error)
-      setErrorDetails(error.message || "Ocorreu um erro ao buscar os dados. Tente novamente.")
-    } finally {
-      setLoadingDetails(false)
-    }
+  const handleSelectFixture = useCallback((fixtureId: number, fixtureName: string) => {
+    setSelectedFixture({ id: fixtureId, name: fixtureName })
+    setModalOpen(true)
   }, [])
 
   const filteredUpcomingFixtures = upcomingFixtures.filter(
@@ -132,7 +102,7 @@ export default function AnalisesPage() {
                 <Card
                   key={fixture.id}
                   className="cursor-pointer transition-all hover:shadow-md hover:border-primary-forbet"
-                  onClick={() => handleSelectFixture(fixture.id)}
+                  onClick={() => handleSelectFixture(fixture.id, fixture.name)}
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium truncate max-w-[calc(100%-30px)]">
@@ -173,8 +143,9 @@ export default function AnalisesPage() {
                         />
                       )}
                     </div>
-                    <Button variant="link" size="sm" className="w-full mt-2 text-primary-forbet p-0 h-auto">
-                      Analisar Partida
+                    <Button variant="link" size="sm" className="w-full mt-2 text-primary-forbet p-0 h-auto flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      Analisar com IA
                     </Button>
                   </CardContent>
                 </Card>
@@ -200,45 +171,22 @@ export default function AnalisesPage() {
         </CardContent>
       </Card>
 
-      {selectedFixtureId && (loadingDetails || fixtureDetails || errorDetails) && (
-        <>
-          {loadingDetails && (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border bg-card p-8 text-center shadow-sm">
-              <Loader2 className="h-10 w-10 animate-spin text-primary-forbet" />
-              <p className="font-semibold">Carregando análise detalhada...</p>
-            </div>
-          )}
-          {errorDetails && !loadingDetails && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Erro ao Carregar Análise</AlertTitle>
-              <AlertDescription>
-                {errorDetails}
-                <Button
-                  variant="link"
-                  onClick={() => handleSelectFixture(selectedFixtureId)}
-                  className="p-0 h-auto ml-1"
-                >
-                  Tentar novamente.
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-          {fixtureDetails && !loadingDetails && !errorDetails && (
-            <AnalysisDetailsDisplay fixtureDetails={fixtureDetails} />
-          )}
-        </>
-      )}
-      {!selectedFixtureId &&
-        !loadingDetails && ( // Mensagem inicial antes de selecionar qualquer jogo
-          <Alert variant="default" className="border-primary-forbet/50 bg-primary-forbet/10 text-primary-forbet">
-            <BarChartHorizontalBig className="h-5 w-5 text-primary-forbet" />
-            <AlertTitle className="font-semibold">Selecione uma Partida</AlertTitle>
-            <AlertDescription>
-              Clique em uma das partidas da lista acima para visualizar a análise completa da SportMonks API.
-            </AlertDescription>
-          </Alert>
-        )}
+      {/* Initial Message */}
+      <Alert variant="default" className="border-primary-forbet/50 bg-primary-forbet/10 text-primary-forbet">
+        <Brain className="h-5 w-5 text-primary-forbet" />
+        <AlertTitle className="font-semibold">Análise Inteligente Powered by IA</AlertTitle>
+        <AlertDescription>
+          Clique em <strong>"Analisar com IA"</strong> para uma análise completa incluindo dados H2H, forma das equipes e insights personalizados.
+        </AlertDescription>
+      </Alert>
+
+      {/* AI Analysis Modal */}
+      <AIAnalysisModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        fixtureId={selectedFixture?.id || 0}
+        fixtureName={selectedFixture?.name || ""}
+      />
     </div>
   )
 }
