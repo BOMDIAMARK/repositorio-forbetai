@@ -6,20 +6,20 @@ import { CalendarX, AlertTriangle, Trophy } from "lucide-react"
 // Buscar fixtures diretamente via SportMonks API
 async function fetchFixtures(date: string) {
   try {
-    // Para server-side fetch, usar URL absoluta baseada no ambiente
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-      
-    const response = await fetch(`${baseUrl}/api/fixtures?date=${date}`, {
-      next: { revalidate: 300 } // Cache por 5 minutos
-    })
+    // Usar a função diretamente em vez de fetch HTTP para evitar problemas de URL
+    // Isso é mais eficiente e evita problemas de rede internos
+    const { fetchFixturesByDate } = await import('@/lib/sportmonks-api-client')
+    const fixtures = await fetchFixturesByDate(date)
     
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`)
+    return {
+      success: true,
+      data: fixtures,
+      meta: {
+        date,
+        count: fixtures.length,
+        provider: 'SportMonks'
+      }
     }
-    
-    const result = await response.json()
-    return result
   } catch (error) {
     console.error('Erro no fetch SportMonks:', error)
     throw error
