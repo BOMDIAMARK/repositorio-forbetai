@@ -7,6 +7,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import type { SportMonksFixture, SportMonksFixtureDetails } from "@/app/(platform)/predicoes/types-sportmonks"
 import { processStatistics, processScores, type ProcessedStatistic } from "@/lib/statistics-mapper"
+import { formatOdd, calculateImpliedProbability, getOddColor } from "@/lib/odds-mapper"
+import { processPredictions, getProbabilityColor, getProbabilityIcon, type PredictionData } from "@/lib/predictions-processor"
 
 interface FixtureDetailsModalProps {
   fixture: SportMonksFixture | null
@@ -19,8 +21,10 @@ export function FixtureDetailsModal({ fixture, isOpen, onClose }: FixtureDetails
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isStatsExpanded, setIsStatsExpanded] = useState(false)
-  const [isGoiasStatsExpanded, setIsGoiasStatsExpanded] = useState(false)
-  const [isAthleticStatsExpanded, setIsAthleticStatsExpanded] = useState(false)
+  const [isHomeStatsExpanded, setIsHomeStatsExpanded] = useState(false)
+  const [isAwayStatsExpanded, setIsAwayStatsExpanded] = useState(false)
+  const [isPredictionsExpanded, setIsPredictionsExpanded] = useState(false)
+  const [isOddsExpanded, setIsOddsExpanded] = useState(false)
   const [isRawDataExpanded, setIsRawDataExpanded] = useState(false)
 
   useEffect(() => {
@@ -31,8 +35,10 @@ export function FixtureDetailsModal({ fixture, isOpen, onClose }: FixtureDetails
       setDetails(null)
       setError(null)
       setIsStatsExpanded(false)
-      setIsGoiasStatsExpanded(false)
-      setIsAthleticStatsExpanded(false)
+      setIsHomeStatsExpanded(false)
+      setIsAwayStatsExpanded(false)
+      setIsPredictionsExpanded(false)
+      setIsOddsExpanded(false)
       setIsRawDataExpanded(false)
     }
   }, [isOpen, fixture])
@@ -84,22 +90,67 @@ export function FixtureDetailsModal({ fixture, isOpen, onClose }: FixtureDetails
 
   const scores = scoresArray.length > 0 ? processScores(scoresArray) : { home: 0, away: 0 }
 
-  // Obter nomes dos times
+  // Obter nomes e informações dos times
   const homeTeam = participantsArray.find((p: any) => p.meta?.location === "home")
   const awayTeam = participantsArray.find((p: any) => p.meta?.location === "away")
 
   const homeTeamName = homeTeam?.name || "Casa"
   const awayTeamName = awayTeam?.name || "Fora"
+  const homeTeamImage = homeTeam?.image_path
+  const awayTeamImage = awayTeam?.image_path
+
+  // Processar predições baseadas nas odds
+  const predictions: PredictionData = details?.processedOdds 
+    ? processPredictions(details.processedOdds)
+    : {}
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
-            Detalhes: {fixture.name}
+          <DialogTitle className="text-xl font-bold flex items-center justify-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                {homeTeamImage ? (
+                  <img 
+                    src={homeTeamImage} 
+                    alt={homeTeamName}
+                    className="w-6 h-6 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                    }}
+                  />
+                ) : null}
+                <span className={`text-xs font-bold ${homeTeamImage ? 'hidden' : ''}`}>
+                  {homeTeamName.substring(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <span>{homeTeamName}</span>
+            </div>
+            <span>vs</span>
+            <div className="flex items-center space-x-2">
+              <span>{awayTeamName}</span>
+              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                {awayTeamImage ? (
+                  <img 
+                    src={awayTeamImage} 
+                    alt={awayTeamName}
+                    className="w-6 h-6 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                    }}
+                  />
+                ) : null}
+                <span className={`text-xs font-bold ${awayTeamImage ? 'hidden' : ''}`}>
+                  {awayTeamName.substring(0, 2).toUpperCase()}
+                </span>
+              </div>
+            </div>
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Estatísticas detalhadas da partida.
+          <p className="text-sm text-muted-foreground text-center">
+            🎯 Predições, estatísticas e odds reais da partida
           </p>
         </DialogHeader>
 
@@ -127,12 +178,55 @@ export function FixtureDetailsModal({ fixture, isOpen, onClose }: FixtureDetails
 
         {details && !loading && (
           <div className="space-y-6">
-            {/* Placar */}
+            {/* Placar com Times */}
             <div className="text-center">
-              <div className="text-3xl font-bold">
-                {scores.home} - {scores.away}
+              <div className="flex items-center justify-center space-x-4 mb-4">
+                <div className="text-center">
+                  <div className="w-12 h-12 mx-auto mb-2 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                    {homeTeamImage ? (
+                      <img 
+                        src={homeTeamImage} 
+                        alt={homeTeamName}
+                        className="w-10 h-10 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                        }}
+                      />
+                    ) : null}
+                    <span className={`text-xs font-bold ${homeTeamImage ? 'hidden' : ''}`}>
+                      {homeTeamName.substring(0, 3).toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium">{homeTeamName}</p>
+                </div>
+
+                <div className="text-3xl font-bold">
+                  {scores.home} - {scores.away}
+                </div>
+
+                <div className="text-center">
+                  <div className="w-12 h-12 mx-auto mb-2 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                    {awayTeamImage ? (
+                      <img 
+                        src={awayTeamImage} 
+                        alt={awayTeamName}
+                        className="w-10 h-10 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                        }}
+                      />
+                    ) : null}
+                    <span className={`text-xs font-bold ${awayTeamImage ? 'hidden' : ''}`}>
+                      {awayTeamName.substring(0, 3).toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium">{awayTeamName}</p>
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground mt-1">
+              
+              <div className="text-sm text-muted-foreground">
                 {details.state?.name || "Status não disponível"}
               </div>
             </div>
@@ -159,59 +253,464 @@ export function FixtureDetailsModal({ fixture, isOpen, onClose }: FixtureDetails
             )}
 
             {/* Estatísticas Completas por Time */}
-            <Collapsible open={isGoiasStatsExpanded} onOpenChange={setIsGoiasStatsExpanded}>
+            <Collapsible open={isHomeStatsExpanded} onOpenChange={setIsHomeStatsExpanded}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
-                  <span>Estatísticas Completas - {homeTeamName}</span>
-                  {isGoiasStatsExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                  <span>📊 Estatísticas Completas - {homeTeamName}</span>
+                  {isHomeStatsExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 mt-2">
                 <div className="bg-muted p-4 rounded-md">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-8 h-8 bg-background rounded-full flex items-center justify-center overflow-hidden">
+                      {homeTeamImage ? (
+                        <img 
+                          src={homeTeamImage} 
+                          alt={homeTeamName}
+                          className="w-6 h-6 object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                          }}
+                        />
+                      ) : null}
+                      <span className={`text-xs font-bold ${homeTeamImage ? 'hidden' : ''}`}>
+                        {homeTeamName.substring(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                    <h5 className="font-semibold">{homeTeamName}</h5>
+                  </div>
+                  
                   {statisticsArray.filter((stat: any) => stat.participant_id === homeTeam?.id).length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="space-y-3">
                       {statisticsArray
                         .filter((stat: any) => stat.participant_id === homeTeam?.id)
                         .map((stat: any, index: number) => (
-                          <div key={index} className="flex justify-between">
-                            <span>Tipo {stat.type_id}:</span>
-                            <span className="font-medium">{stat.data?.value ?? "N/A"}</span>
+                          <div key={index} className="flex justify-between items-center p-3 bg-background rounded-lg border">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-sm font-medium">Tipo {stat.type_id}</span>
+                            </div>
+                            <span className="font-bold text-lg">{stat.data?.value ?? "N/A"}</span>
                           </div>
                         ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">Nenhuma estatística de {homeTeamName} disponível.</p>
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-2">📊</div>
+                      <p className="text-muted-foreground">
+                        Estatísticas não disponíveis para {homeTeamName}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Dados podem não estar disponíveis para jogos futuros
+                      </p>
+                    </div>
                   )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
 
-            <Collapsible open={isAthleticStatsExpanded} onOpenChange={setIsAthleticStatsExpanded}>
+            <Collapsible open={isAwayStatsExpanded} onOpenChange={setIsAwayStatsExpanded}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
-                  <span>Estatísticas Completas - {awayTeamName}</span>
-                  {isAthleticStatsExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                  <span>📊 Estatísticas Completas - {awayTeamName}</span>
+                  {isAwayStatsExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 mt-2">
                 <div className="bg-muted p-4 rounded-md">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-8 h-8 bg-background rounded-full flex items-center justify-center overflow-hidden">
+                      {awayTeamImage ? (
+                        <img 
+                          src={awayTeamImage} 
+                          alt={awayTeamName}
+                          className="w-6 h-6 object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                          }}
+                        />
+                      ) : null}
+                      <span className={`text-xs font-bold ${awayTeamImage ? 'hidden' : ''}`}>
+                        {awayTeamName.substring(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                    <h5 className="font-semibold">{awayTeamName}</h5>
+                  </div>
+                  
                   {statisticsArray.filter((stat: any) => stat.participant_id === awayTeam?.id).length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="space-y-3">
                       {statisticsArray
                         .filter((stat: any) => stat.participant_id === awayTeam?.id)
                         .map((stat: any, index: number) => (
-                          <div key={index} className="flex justify-between">
-                            <span>Tipo {stat.type_id}:</span>
-                            <span className="font-medium">{stat.data?.value ?? "N/A"}</span>
+                          <div key={index} className="flex justify-between items-center p-3 bg-background rounded-lg border">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-sm font-medium">Tipo {stat.type_id}</span>
+                            </div>
+                            <span className="font-bold text-lg">{stat.data?.value ?? "N/A"}</span>
                           </div>
                         ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">Nenhuma estatística de {awayTeamName} disponível.</p>
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-2">📊</div>
+                      <p className="text-muted-foreground">
+                        Estatísticas não disponíveis para {awayTeamName}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Dados podem não estar disponíveis para jogos futuros
+                      </p>
+                    </div>
                   )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
+
+            {/* Predições Intuitivas */}
+            {(predictions.fullTimeResult || predictions.bothTeamsToScore || predictions.totalGoals) && (
+              <Collapsible open={isPredictionsExpanded} onOpenChange={setIsPredictionsExpanded}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span>🎯 Predições e Probabilidades</span>
+                    {isPredictionsExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 mt-4">
+                  <div className="grid gap-4">
+                    
+                    {/* Resultado Final */}
+                    {predictions.fullTimeResult && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">🏆 Resultado Final</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {getProbabilityIcon(predictions.fullTimeResult.home.probability)} Casa
+                            </div>
+                            <div className={`text-lg font-bold ${getProbabilityColor(predictions.fullTimeResult.home.probability)}`}>
+                              {predictions.fullTimeResult.home.probability}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {predictions.fullTimeResult.home.description}
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {getProbabilityIcon(predictions.fullTimeResult.draw.probability)} Empate
+                            </div>
+                            <div className={`text-lg font-bold ${getProbabilityColor(predictions.fullTimeResult.draw.probability)}`}>
+                              {predictions.fullTimeResult.draw.probability}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {predictions.fullTimeResult.draw.description}
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {getProbabilityIcon(predictions.fullTimeResult.away.probability)} Fora
+                            </div>
+                            <div className={`text-lg font-bold ${getProbabilityColor(predictions.fullTimeResult.away.probability)}`}>
+                              {predictions.fullTimeResult.away.probability}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {predictions.fullTimeResult.away.description}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ambas Marcam */}
+                    {predictions.bothTeamsToScore && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">⚽ Ambas as Equipes Marcam</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {getProbabilityIcon(predictions.bothTeamsToScore.yes.probability)} Sim
+                            </div>
+                            <div className={`text-lg font-bold ${getProbabilityColor(predictions.bothTeamsToScore.yes.probability)}`}>
+                              {predictions.bothTeamsToScore.yes.probability}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {predictions.bothTeamsToScore.yes.description}
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {getProbabilityIcon(predictions.bothTeamsToScore.no.probability)} Não
+                            </div>
+                            <div className={`text-lg font-bold ${getProbabilityColor(predictions.bothTeamsToScore.no.probability)}`}>
+                              {predictions.bothTeamsToScore.no.probability}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {predictions.bothTeamsToScore.no.description}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total de Gols */}
+                    {predictions.totalGoals && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">🎯 Total de Gols</h4>
+                        <div className="space-y-3">
+                          {predictions.totalGoals.over25.probability > 0 && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  {getProbabilityIcon(predictions.totalGoals.over25.probability)} Over 2.5
+                                </div>
+                                <div className={`font-bold ${getProbabilityColor(predictions.totalGoals.over25.probability)}`}>
+                                  {predictions.totalGoals.over25.probability}%
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {predictions.totalGoals.over25.description}
+                                </div>
+                              </div>
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  {getProbabilityIcon(predictions.totalGoals.under25.probability)} Under 2.5
+                                </div>
+                                <div className={`font-bold ${getProbabilityColor(predictions.totalGoals.under25.probability)}`}>
+                                  {predictions.totalGoals.under25.probability}%
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {predictions.totalGoals.under25.description}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {predictions.totalGoals.over15.probability > 0 && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  {getProbabilityIcon(predictions.totalGoals.over15.probability)} Over 1.5
+                                </div>
+                                <div className={`font-bold ${getProbabilityColor(predictions.totalGoals.over15.probability)}`}>
+                                  {predictions.totalGoals.over15.probability}%
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {predictions.totalGoals.over15.description}
+                                </div>
+                              </div>
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground mb-1">
+                                  {getProbabilityIcon(predictions.totalGoals.under15.probability)} Under 1.5
+                                </div>
+                                <div className={`font-bold ${getProbabilityColor(predictions.totalGoals.under15.probability)}`}>
+                                  {predictions.totalGoals.under15.probability}%
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {predictions.totalGoals.under15.description}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Placar Correto */}
+                    {predictions.correctScore && predictions.correctScore.length > 0 && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">🔢 Placar Mais Provável</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                          {predictions.correctScore.slice(0, 6).map((score, index) => (
+                            <div key={index} className="text-center p-2 bg-muted rounded">
+                              <div className="text-xs font-medium">{score.score}</div>
+                              <div className={`text-sm font-bold ${getProbabilityColor(score.probability)}`}>
+                                {score.probability}%
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {getProbabilityIcon(score.probability)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-center text-xs text-muted-foreground">
+                      🧠 Probabilidades calculadas com base nas odds da SportMonks
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Odds Reais */}
+            {details.processedOdds && (
+              <Collapsible open={isOddsExpanded} onOpenChange={setIsOddsExpanded}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span>💰 Odds Reais (SportMonks)</span>
+                    {isOddsExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 mt-4">
+                  <div className="grid gap-4">
+                    
+                    {/* Resultado Final (1X2) */}
+                    {details.processedOdds.fullTimeResult && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">🏆 Resultado Final</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">Casa</div>
+                            <div className={`text-lg font-bold ${getOddColor(details.processedOdds.fullTimeResult.home)}`}>
+                              {formatOdd(details.processedOdds.fullTimeResult.home)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {calculateImpliedProbability(details.processedOdds.fullTimeResult.home)}
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">Empate</div>
+                            <div className={`text-lg font-bold ${getOddColor(details.processedOdds.fullTimeResult.draw)}`}>
+                              {formatOdd(details.processedOdds.fullTimeResult.draw)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {calculateImpliedProbability(details.processedOdds.fullTimeResult.draw)}
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">Fora</div>
+                            <div className={`text-lg font-bold ${getOddColor(details.processedOdds.fullTimeResult.away)}`}>
+                              {formatOdd(details.processedOdds.fullTimeResult.away)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {calculateImpliedProbability(details.processedOdds.fullTimeResult.away)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ambas Marcam */}
+                    {details.processedOdds.bothTeamsToScore && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">⚽ Ambas as Equipes Marcam</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">Sim</div>
+                            <div className={`text-lg font-bold ${getOddColor(details.processedOdds.bothTeamsToScore.yes)}`}>
+                              {formatOdd(details.processedOdds.bothTeamsToScore.yes)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {calculateImpliedProbability(details.processedOdds.bothTeamsToScore.yes)}
+                            </div>
+                          </div>
+                          <div className="text-center p-3 bg-muted rounded-lg">
+                            <div className="text-xs text-muted-foreground mb-1">Não</div>
+                            <div className={`text-lg font-bold ${getOddColor(details.processedOdds.bothTeamsToScore.no)}`}>
+                              {formatOdd(details.processedOdds.bothTeamsToScore.no)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {calculateImpliedProbability(details.processedOdds.bothTeamsToScore.no)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total de Gols */}
+                    {details.processedOdds.totalGoals && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">🎯 Total de Gols</h4>
+                        <div className="space-y-3">
+                          {details.processedOdds.totalGoals.over25 > 0 && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground">Over 2.5</div>
+                                <div className={`font-bold ${getOddColor(details.processedOdds.totalGoals.over25)}`}>
+                                  {formatOdd(details.processedOdds.totalGoals.over25)}
+                                </div>
+                              </div>
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground">Under 2.5</div>
+                                <div className={`font-bold ${getOddColor(details.processedOdds.totalGoals.under25)}`}>
+                                  {formatOdd(details.processedOdds.totalGoals.under25)}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {details.processedOdds.totalGoals.over15 > 0 && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground">Over 1.5</div>
+                                <div className={`font-bold ${getOddColor(details.processedOdds.totalGoals.over15)}`}>
+                                  {formatOdd(details.processedOdds.totalGoals.over15)}
+                                </div>
+                              </div>
+                              <div className="text-center p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground">Under 1.5</div>
+                                <div className={`font-bold ${getOddColor(details.processedOdds.totalGoals.under15)}`}>
+                                  {formatOdd(details.processedOdds.totalGoals.under15)}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Placar Correto */}
+                    {details.processedOdds.correctScore && details.processedOdds.correctScore.length > 0 && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">🔢 Placar Correto (Top 6)</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                          {details.processedOdds.correctScore.slice(0, 6).map((score, index) => (
+                            <div key={index} className="text-center p-2 bg-muted rounded">
+                              <div className="text-xs font-medium">{score.score}</div>
+                              <div className={`text-sm font-bold ${getOddColor(score.odd)}`}>
+                                {formatOdd(score.odd)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Handicap Asiático */}
+                    {details.processedOdds.asianHandicap && details.processedOdds.asianHandicap.length > 0 && (
+                      <div className="bg-card border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3 text-center">🏃 Handicap Asiático</h4>
+                        <div className="space-y-2">
+                          {details.processedOdds.asianHandicap.slice(0, 3).map((handicap, index) => (
+                            <div key={index} className="grid grid-cols-3 gap-3 text-center">
+                              <div className="p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground">Casa ({handicap.handicap})</div>
+                                <div className={`font-bold ${getOddColor(handicap.home)}`}>
+                                  {formatOdd(handicap.home)}
+                                </div>
+                              </div>
+                              <div className="p-2 bg-muted rounded flex items-center justify-center">
+                                <div className="text-xs font-medium">{handicap.handicap}</div>
+                              </div>
+                              <div className="p-2 bg-muted rounded">
+                                <div className="text-xs text-muted-foreground">Fora ({handicap.handicap})</div>
+                                <div className={`font-bold ${getOddColor(handicap.away)}`}>
+                                  {formatOdd(handicap.away)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-center text-xs text-muted-foreground">
+                      💡 Odds mostram os melhores valores encontrados entre todas as casas de apostas disponíveis
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             {/* Dados Brutos (JSON) */}
             <Collapsible open={isRawDataExpanded} onOpenChange={setIsRawDataExpanded}>

@@ -1,4 +1,5 @@
 import type { SportMonksFixture, SportMonksFixtureDetails } from "@/app/(platform)/predicoes/types-sportmonks"
+import { SportMonksOdd, ProcessedOdds, getBestOdds } from './odds-mapper'
 
 const API_BASE_URL = process.env.SPORTMONKS_BASE_URL || "https://api.sportmonks.com/v3"
 const API_KEY = process.env.SPORTMONKS_API_KEY
@@ -120,8 +121,8 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
     throw new Error(`Formato de data inválido: ${date}. Use YYYY-MM-DD`)
   }
   
-  // Includes simplificados - apenas participants que já está testado e funcionando
-  const includes = "participants"
+  // Includes expandidos para carregar odds básicas na lista
+  const includes = "participants,odds"
   const endpoint = `/football/fixtures/between/${date}/${date}?include=${includes}`
 
   try {
@@ -130,21 +131,38 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
     const fixtures = response.data || []
     console.log(`📊 Encontradas ${fixtures.length} fixtures para ${date}`)
     
+    // Processar odds básicas se disponíveis
+    const processedFixtures = fixtures.map((fixture: any) => {
+      if (fixture.odds && fixture.odds.length > 0) {
+        const rawOdds = fixture.odds as SportMonksOdd[]
+        const processedOdds = getBestOdds(rawOdds)
+        
+        return {
+          ...fixture,
+          rawOdds,
+          processedOdds
+        }
+      }
+      
+      return fixture
+    })
+    
     // Log de sample dos dados se houver fixtures
-    if (fixtures.length > 0) {
-      const sample = fixtures[0]
+    if (processedFixtures.length > 0) {
+      const sample = processedFixtures[0]
       console.log(`📋 Sample fixture:`, {
         id: sample.id,
         name: sample.name,
         starting_at: sample.starting_at,
         hasLeague: !!sample.league,
         hasParticipants: !!sample.participants,
+        hasOdds: !!sample.rawOdds,
         participantsCount: sample.participants?.length || 0,
-        hasScores: !!sample.scores
+        oddsCount: sample.rawOdds?.length || 0
       })
     }
 
-    return fixtures
+    return processedFixtures
     
   } catch (error) {
     console.error(`❌ Erro em fetchFixturesByDate para ${date}:`, error)
@@ -163,12 +181,13 @@ export async function fetchFixtureDetails(fixtureId: number): Promise<SportMonks
   }
 
   try {
-    // Buscar dados básicos com participants
-    const [basicData, statistics, scores, state] = await Promise.allSettled([
+    // Buscar dados básicos com participants e odds
+    const [basicData, statistics, scores, state, odds] = await Promise.allSettled([
       fetchSportMonksApi<{ data: SportMonksFixtureDetails }>(`/football/fixtures/${fixtureId}?include=participants`, true),
       fetchSportMonksApi<{ data: any[] }>(`/football/fixtures/${fixtureId}?include=statistics`, true),
       fetchSportMonksApi<{ data: any[] }>(`/football/fixtures/${fixtureId}?include=scores`, true),
-      fetchSportMonksApi<{ data: any }>(`/football/fixtures/${fixtureId}?include=state`, true)
+      fetchSportMonksApi<{ data: any }>(`/football/fixtures/${fixtureId}?include=state`, true),
+      fetchSportMonksApi<{ data: any }>(`/football/fixtures/${fixtureId}?include=odds`, true)
     ])
 
     // Verificar se os dados básicos foram obtidos com sucesso
@@ -208,6 +227,25 @@ export async function fetchFixtureDetails(fixtureId: number): Promise<SportMonks
       console.warn(`⚠️ State não disponível:`, state.status === 'rejected' ? state.reason : 'No data')
     }
 
+    // Processar odds se disponível
+    if (odds.status === 'fulfilled' && odds.value.data?.odds) {
+      const rawOdds = odds.value.data.odds as SportMonksOdd[]
+      const processedOdds = getBestOdds(rawOdds)
+      
+      fixture.rawOdds = rawOdds
+      fixture.processedOdds = processedOdds
+      
+      console.log(`💰 ${rawOdds.length} odds processadas:`, {
+        hasFullTimeResult: !!processedOdds.fullTimeResult,
+        hasBothTeamsToScore: !!processedOdds.bothTeamsToScore,
+        hasTotalGoals: !!processedOdds.totalGoals,
+        hasCorrectScore: !!processedOdds.correctScore,
+        hasAsianHandicap: !!processedOdds.asianHandicap
+      })
+    } else {
+      console.warn(`⚠️ Odds não disponíveis:`, odds.status === 'rejected' ? odds.reason : 'No odds data')
+    }
+
     console.log(`📋 Detalhes completos da fixture ${fixtureId}:`, {
       id: fixture.id,
       name: fixture.name,
@@ -216,9 +254,12 @@ export async function fetchFixtureDetails(fixtureId: number): Promise<SportMonks
       hasScores: !!fixture.scores,
       hasStatistics: !!fixture.statistics,
       hasState: !!fixture.state,
+      hasOdds: !!fixture.rawOdds,
+      hasProcessedOdds: !!fixture.processedOdds,
       participantsCount: fixture.participants?.length || 0,
       scoresCount: fixture.scores?.length || 0,
-      statisticsCount: fixture.statistics?.length || 0
+      statisticsCount: fixture.statistics?.length || 0,
+      oddsCount: fixture.rawOdds?.length || 0
     })
 
     return fixture as SportMonksFixtureDetails

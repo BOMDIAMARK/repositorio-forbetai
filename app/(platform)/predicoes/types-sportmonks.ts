@@ -1,3 +1,5 @@
+import { ProcessedOdds } from '@/lib/odds-mapper'
+
 interface SportMonksTeamInfo {
   id: number
   name: string
@@ -152,6 +154,28 @@ export interface SportMonksFixture {
   odds?: { data: SportMonksOddsData[] }
   predictions?: { data: SportMonksPredictionData[] } // For general predictions
   statistics?: { data: SportMonksStatistic[] } // For summary stats if included in list
+  // Processed odds (added by our client)
+  rawOdds?: Array<{
+    id: number
+    fixture_id: number
+    market_id: number
+    bookmaker_id: number
+    label: string
+    value: string
+    name: string
+    sort_order: number
+    market_description: string
+    probability: string
+    dp3: string
+    fractional: string
+    american: string
+    winning: boolean
+    stopped: boolean
+    total?: string
+    handicap?: string
+    participants?: string
+  }>
+  processedOdds?: ProcessedOdds
 }
 
 // For detailed fixture information
@@ -167,5 +191,28 @@ export interface SportMonksFixtureDetails extends SportMonksFixture {
     short_name: string
     developer_name: string
   }
+  // Raw odds data from API (flattened from include=odds)
+  rawOdds?: Array<{
+    id: number
+    fixture_id: number
+    market_id: number
+    bookmaker_id: number
+    label: string
+    value: string
+    name: string
+    sort_order: number
+    market_description: string
+    probability: string
+    dp3: string
+    fractional: string
+    american: string
+    winning: boolean
+    stopped: boolean
+    total?: string
+    handicap?: string
+    participants?: string
+  }>
+  // Processed odds for easy display
+  processedOdds?: ProcessedOdds
   // Ensure all fields from fetchFixtureDetails include are covered
 }

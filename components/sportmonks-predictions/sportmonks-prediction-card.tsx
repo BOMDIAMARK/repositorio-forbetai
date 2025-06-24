@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { CalendarIcon, ClockIcon, TrophyIcon } from "lucide-react"
 import { FixtureDetailsModal } from "./fixture-details-modal"
 import type { SportMonksFixture } from "@/app/(platform)/predicoes/types-sportmonks"
+import { formatOdd, getOddColor } from "@/lib/odds-mapper"
 
 interface SportmonksPredictionCardProps {
   fixture: SportMonksFixture
@@ -41,11 +42,15 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
   // Get league name if available
   const leagueName = (fixture.league as any)?.data?.name || (fixture.league as any)?.name || "Liga Desconhecida"
 
-  // SportMonks predictions can be complex. Let's try to find a specific prediction type.
-  // For simplicity, we'll create placeholder odds until we have access to real predictions.
-  const placeholderOdds = {
+  // Get real odds if available, otherwise show placeholders
+  const hasRealOdds = fixture.processedOdds?.fullTimeResult
+  const odds = hasRealOdds ? {
+    home: formatOdd(fixture.processedOdds!.fullTimeResult!.home),
+    draw: formatOdd(fixture.processedOdds!.fullTimeResult!.draw),
+    away: formatOdd(fixture.processedOdds!.fullTimeResult!.away)
+  } : {
     home: "-",
-    draw: "-",
+    draw: "-", 
     away: "-"
   }
 
@@ -117,29 +122,38 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
 
           {/* Odds Section */}
           <div className="bg-slate-800 rounded-lg p-3">
-            <h3 className="text-sm font-semibold mb-2 text-center text-slate-200">Odds (1X2):</h3>
+            <h3 className="text-sm font-semibold mb-2 text-center text-slate-200">💰 Odds (1X2):</h3>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-slate-700 rounded p-2">
                 <p className="text-xs text-slate-400">Casa:</p>
-                <p className="font-bold text-purple-400">{placeholderOdds.home}</p>
+                <p className={`font-bold ${hasRealOdds ? getOddColor(fixture.processedOdds!.fullTimeResult!.home) : 'text-green-400'}`}>
+                  {odds.home}
+                </p>
               </div>
               <div className="bg-slate-700 rounded p-2">
                 <p className="text-xs text-slate-400">Empate:</p>
-                <p className="font-bold text-purple-400">{placeholderOdds.draw}</p>
+                <p className={`font-bold ${hasRealOdds ? getOddColor(fixture.processedOdds!.fullTimeResult!.draw) : 'text-yellow-400'}`}>
+                  {odds.draw}
+                </p>
               </div>
               <div className="bg-slate-700 rounded p-2">
                 <p className="text-xs text-slate-400">Fora:</p>
-                <p className="font-bold text-purple-400">{placeholderOdds.away}</p>
+                <p className={`font-bold ${hasRealOdds ? getOddColor(fixture.processedOdds!.fullTimeResult!.away) : 'text-red-400'}`}>
+                  {odds.away}
+                </p>
               </div>
             </div>
+            <p className="text-xs text-slate-500 text-center mt-2">
+              {hasRealOdds ? '✅ Odds reais da SportMonks' : '⏳ Odds carregadas nos detalhes'}
+            </p>
           </div>
 
           {/* Details Button */}
           <Button 
             onClick={() => setIsModalOpen(true)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors duration-200"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 rounded-lg transition-all duration-200"
           >
-            📊 Ver Detalhes
+            📊 Ver Detalhes & Predições {hasRealOdds ? '💰' : '🎯'}
           </Button>
         </CardContent>
       </Card>
