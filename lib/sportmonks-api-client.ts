@@ -121,18 +121,15 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
     throw new Error(`Formato de data inválido: ${date}. Use YYYY-MM-DD`)
   }
   
-  // Includes válidos para a API do SportMonks
-  const includes = "participants,league"
-  const endpoint = `/football/fixtures/between/${date}/${date}?include=${includes}`
-
+  // Tentar primeiro com league e participants separadamente
   try {
+    const includes = "league,participants"
+    const endpoint = `/football/fixtures/between/${date}/${date}?include=${includes}`
     const response = await fetchSportMonksApi<{ data: SportMonksFixture[] }>(endpoint)
     
     const fixtures = response.data || []
     console.log(`📊 Encontradas ${fixtures.length} fixtures para ${date}`)
     
-    // Por enquanto, retornar fixtures sem odds para evitar muitas requisições
-    // As odds serão carregadas individualmente quando necessário
     const processedFixtures = fixtures.map((fixture: any) => {
       return {
         ...fixture,
@@ -157,11 +154,44 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
     }
 
     return processedFixtures
-    
   } catch (error) {
-    console.error(`❌ Erro em fetchFixturesByDate para ${date}:`, error)
-    // Em vez de retornar array vazio, propagar o erro para melhor debug
-    throw error
+    console.warn(`⚠️ Tentativa com league,participants falhou:`, error)
+    
+    // Fallback para apenas participants
+    try {
+      const includes = "participants"
+      const endpoint = `/football/fixtures/between/${date}/${date}?include=${includes}`
+      const response = await fetchSportMonksApi<{ data: SportMonksFixture[] }>(endpoint)
+      
+      const fixtures = response.data || []
+      console.log(`📊 Encontradas ${fixtures.length} fixtures para ${date} (apenas participants)`)
+      
+      // Buscar informações da liga separadamente para cada fixture se necessário
+      const processedFixtures = await Promise.all(fixtures.map(async (fixture: any) => {
+        try {
+          // Tentar buscar dados da liga separadamente se league_id estiver disponível
+          if (fixture.league_id && !fixture.league) {
+            const leagueResponse = await fetchSportMonksApi<{ data: any }>(`/football/leagues/${fixture.league_id}`)
+            if (leagueResponse.data) {
+              fixture.league = leagueResponse.data
+            }
+          }
+        } catch (leagueError) {
+          console.warn(`⚠️ Erro ao buscar liga para fixture ${fixture.id}:`, leagueError)
+        }
+        
+        return {
+          ...fixture,
+          rawOdds: null,
+          processedOdds: null
+        }
+      }))
+      
+      return processedFixtures
+    } catch (fallbackError) {
+      console.error(`❌ Erro em fetchFixturesByDate para ${date}:`, fallbackError)
+      throw fallbackError
+    }
   }
 }
 
