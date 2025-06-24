@@ -111,6 +111,7 @@ async function fetchSportMonksApi<T>(endpoint: string, isDetailFetch = false): P
   }
 }
 
+// Função para buscar fixture básica com participantes
 export async function fetchFixturesByDate(date: string): Promise<SportMonksFixture[]> {
   console.log(`🏈 Buscando fixtures para data: ${date}`)
   
@@ -152,43 +153,119 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
   }
 }
 
+// Função para buscar detalhes completos de uma fixture
 export async function fetchFixtureDetails(fixtureId: number): Promise<SportMonksFixtureDetails | null> {
-  console.log(`🔍 Buscando detalhes da fixture: ${fixtureId}`)
+  console.log(`🔍 Buscando detalhes completos da fixture: ${fixtureId}`)
   
   // Validar ID
   if (!fixtureId || isNaN(fixtureId) || fixtureId <= 0) {
     throw new Error(`ID de fixture inválido: ${fixtureId}`)
   }
-  
-  // Includes simplificados - apenas participants para começar
-  const includes = "participants"
-  const endpoint = `/football/fixtures/${fixtureId}?include=${includes}`
 
   try {
-    const response = await fetchSportMonksApi<{ data: SportMonksFixtureDetails }>(endpoint, true)
-    
-    const fixture = response.data || null
-    
-    if (fixture) {
-      console.log(`📋 Detalhes da fixture ${fixtureId}:`, {
-        id: fixture.id,
-        name: fixture.name,
-        starting_at: fixture.starting_at,
-        hasLeague: !!fixture.league,
-        hasParticipants: !!fixture.participants,
-        hasScores: !!fixture.scores,
-        hasStatistics: !!fixture.statistics,
-        hasPeriods: !!fixture.periods
-      })
-    } else {
-      console.warn(`⚠️ Nenhum dado retornado para fixture ${fixtureId}`)
+    // Buscar dados básicos com participants
+    const [basicData, statistics, scores, state] = await Promise.allSettled([
+      fetchSportMonksApi<{ data: SportMonksFixtureDetails }>(`/football/fixtures/${fixtureId}?include=participants`, true),
+      fetchSportMonksApi<{ data: any[] }>(`/football/fixtures/${fixtureId}?include=statistics`, true),
+      fetchSportMonksApi<{ data: any[] }>(`/football/fixtures/${fixtureId}?include=scores`, true),
+      fetchSportMonksApi<{ data: any }>(`/football/fixtures/${fixtureId}?include=state`, true)
+    ])
+
+    // Verificar se os dados básicos foram obtidos com sucesso
+    if (basicData.status !== 'fulfilled') {
+      console.error(`❌ Falha ao buscar dados básicos da fixture ${fixtureId}:`, basicData.reason)
+      return null
     }
-    
-    return fixture
+
+    const fixture = basicData.value.data as any
+
+    if (!fixture) {
+      console.warn(`⚠️ Nenhum dado retornado para fixture ${fixtureId}`)
+      return null
+    }
+
+    // Adicionar statistics se disponível
+    if (statistics.status === 'fulfilled' && statistics.value.data) {
+      fixture.statistics = statistics.value.data
+      console.log(`📊 ${statistics.value.data.length} estatísticas carregadas`)
+    } else {
+      console.warn(`⚠️ Estatísticas não disponíveis:`, statistics.status === 'rejected' ? statistics.reason : 'No data')
+    }
+
+    // Adicionar scores se disponível
+    if (scores.status === 'fulfilled' && scores.value.data) {
+      fixture.scores = scores.value.data
+      console.log(`⚽ ${scores.value.data.length} scores carregados`)
+    } else {
+      console.warn(`⚠️ Scores não disponíveis:`, scores.status === 'rejected' ? scores.reason : 'No data')
+    }
+
+    // Adicionar state se disponível
+    if (state.status === 'fulfilled' && state.value.data) {
+      fixture.state = state.value.data
+      console.log(`🎯 State carregado: ${state.value.data.name}`)
+    } else {
+      console.warn(`⚠️ State não disponível:`, state.status === 'rejected' ? state.reason : 'No data')
+    }
+
+    console.log(`📋 Detalhes completos da fixture ${fixtureId}:`, {
+      id: fixture.id,
+      name: fixture.name,
+      starting_at: fixture.starting_at,
+      hasParticipants: !!fixture.participants,
+      hasScores: !!fixture.scores,
+      hasStatistics: !!fixture.statistics,
+      hasState: !!fixture.state,
+      participantsCount: fixture.participants?.length || 0,
+      scoresCount: fixture.scores?.length || 0,
+      statisticsCount: fixture.statistics?.length || 0
+    })
+
+    return fixture as SportMonksFixtureDetails
     
   } catch (error) {
     console.error(`❌ Erro em fetchFixtureDetails para ID ${fixtureId}:`, error)
     // Retornar null em vez de propagar erro para detalhes
+    return null
+  }
+}
+
+// Função para buscar tipos de estatísticas (para traduzir type_ids)
+export async function fetchStatisticTypes(): Promise<any[]> {
+  console.log(`📋 Buscando tipos de estatísticas...`)
+  
+  try {
+    const endpoint = `/football/types/statistics`
+    const response = await fetchSportMonksApi<{ data: any[] }>(endpoint, true)
+    
+    const types = response.data || []
+    console.log(`📊 Encontrados ${types.length} tipos de estatísticas`)
+    
+    return types
+    
+  } catch (error) {
+    console.error(`❌ Erro ao buscar tipos de estatísticas:`, error)
+    return []
+  }
+}
+
+// Função para buscar odds de uma fixture (se disponível no plano)
+export async function fetchFixtureOdds(fixtureId: number): Promise<any[] | null> {
+  console.log(`💰 Buscando odds da fixture: ${fixtureId}`)
+  
+  try {
+    const endpoint = `/football/fixtures/${fixtureId}?include=odds`
+    const response = await fetchSportMonksApi<{ data: any }>(endpoint, true)
+    
+    if (response.data && response.data.odds) {
+      console.log(`💰 Odds carregadas para fixture ${fixtureId}`)
+      return response.data.odds
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.warn(`⚠️ Odds não disponíveis para fixture ${fixtureId}:`, error)
     return null
   }
 }

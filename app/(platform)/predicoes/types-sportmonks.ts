@@ -159,5 +159,13 @@ export interface SportMonksFixtureDetails extends SportMonksFixture {
   // statistics might be more detailed here or structured differently
   // periods might be included
   periods?: { data: SportMonksPeriod[] }
+  // State information
+  state?: {
+    id: number
+    state: string
+    name: string
+    short_name: string
+    developer_name: string
+  }
   // Ensure all fields from fetchFixtureDetails include are covered
 }
