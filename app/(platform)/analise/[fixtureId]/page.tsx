@@ -93,68 +93,65 @@ export default function DetailedAnalysisPage() {
 
   useEffect(() => {
     async function loadH2HAndFormData() {
-      if (!fixtureId) return
+      if (!fixtureId || !fixtureDetails) return
       
       try {
-        // Simulate H2H and form data loading
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const homeTeam = fixtureDetails.participants?.find((p: any) => p.meta?.location === "home")
+        const awayTeam = fixtureDetails.participants?.find((p: any) => p.meta?.location === "away")
         
-        // Mock H2H data
-        setH2hData({
-          wins: 3,
-          draws: 2,
-          losses: 1,
-          goals_for: 8,
-          goals_against: 5,
-          last_5_results: [
-            { result: 'W', score: '2-1', date: '2024-01-15' },
-            { result: 'D', score: '1-1', date: '2023-08-20' },
-            { result: 'W', score: '3-0', date: '2023-03-10' },
-            { result: 'L', score: '0-2', date: '2022-11-05' },
-            { result: 'W', score: '2-1', date: '2022-07-18' }
-          ]
-        })
+        if (!homeTeam || !awayTeam) {
+          console.warn('Times não encontrados na fixture')
+          setInitialLoading(false)
+          return
+        }
 
-        // Mock team form data
-        setHomeTeamForm({
-          last_5_matches: [
-            { result: 'W', opponent: 'Time A', score: '2-0', date: '2024-01-20' },
-            { result: 'W', opponent: 'Time B', score: '1-0', date: '2024-01-15' },
-            { result: 'D', opponent: 'Time C', score: '1-1', date: '2024-01-10' },
-            { result: 'W', opponent: 'Time D', score: '3-1', date: '2024-01-05' },
-            { result: 'L', opponent: 'Time E', score: '0-2', date: '2023-12-30' }
-          ],
-          wins: 3,
-          draws: 1,
-          losses: 1,
-          goals_for: 7,
-          goals_against: 4
-        })
+        console.log(`🔍 Carregando dados reais para: ${homeTeam.name} vs ${awayTeam.name}`)
 
-        setAwayTeamForm({
-          last_5_matches: [
-            { result: 'L', opponent: 'Time F', score: '1-2', date: '2024-01-18' },
-            { result: 'W', opponent: 'Time G', score: '2-0', date: '2024-01-13' },
-            { result: 'D', opponent: 'Time H', score: '0-0', date: '2024-01-08' },
-            { result: 'W', opponent: 'Time I', score: '1-0', date: '2024-01-03' },
-            { result: 'W', opponent: 'Time J', score: '3-1', date: '2023-12-28' }
-          ],
-          wins: 3,
-          draws: 1,
-          losses: 1,
-          goals_for: 7,
-          goals_against: 4
-        })
+        // Load real H2H data
+        try {
+          const h2hResponse = await fetch(`/api/sportmonks/h2h/${homeTeam.id}-vs-${awayTeam.id}`)
+          if (h2hResponse.ok) {
+            const h2hResult = await h2hResponse.json()
+            console.log('✅ H2H data loaded:', h2hResult.meta.source)
+            setH2hData(h2hResult.data)
+          } else {
+            console.warn('⚠️ Erro ao carregar H2H, usando fallback')
+          }
+        } catch (h2hError) {
+          console.warn('⚠️ Erro H2H:', h2hError)
+        }
+
+        // Load real team form data
+        const [homeFormResponse, awayFormResponse] = await Promise.allSettled([
+          fetch(`/api/sportmonks/team-form/${homeTeam.id}`),
+          fetch(`/api/sportmonks/team-form/${awayTeam.id}`)
+        ])
+
+        if (homeFormResponse.status === 'fulfilled' && homeFormResponse.value.ok) {
+          const homeFormResult = await homeFormResponse.value.json()
+          console.log('✅ Home team form loaded:', homeFormResult.meta.source)
+          setHomeTeamForm(homeFormResult.data)
+        } else {
+          console.warn('⚠️ Erro ao carregar forma do time da casa')
+        }
+
+        if (awayFormResponse.status === 'fulfilled' && awayFormResponse.value.ok) {
+          const awayFormResult = await awayFormResponse.value.json()
+          console.log('✅ Away team form loaded:', awayFormResult.meta.source)
+          setAwayTeamForm(awayFormResult.data)
+        } else {
+          console.warn('⚠️ Erro ao carregar forma do time visitante')
+        }
 
       } catch (err: any) {
-        console.error('Erro ao carregar dados H2H:', err)
+        console.error('Erro ao carregar dados reais:', err)
       } finally {
         setInitialLoading(false)
       }
     }
 
     loadH2HAndFormData()
-  }, [fixtureId])
+  }, [fixtureId, fixtureDetails])
 
   const formatDateTime = (isoString: string) => {
     const date = new Date(isoString)
@@ -185,7 +182,10 @@ export default function DetailedAnalysisPage() {
 
   const getFormPercentage = (form: TeamForm) => {
     if (!form) return 0
-    return Math.round((form.wins * 3 + form.draws) / (5 * 3) * 100)
+    if (form.form_percentage) return form.form_percentage
+    const totalMatches = form.wins + form.draws + form.losses
+    if (totalMatches === 0) return 0
+    return Math.round((form.wins * 3 + form.draws) / (totalMatches * 3) * 100)
   }
 
   if (loading) {
@@ -507,9 +507,14 @@ export default function DetailedAnalysisPage() {
         <TabsContent value="h2h" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Confrontos Diretos (H2H)
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Confrontos Diretos (H2H)
+                </div>
+                <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                  {h2hData?.total_matches ? `${h2hData.total_matches} jogos` : 'Dados simulados'}
+                </div>
               </CardTitle>
               <CardDescription>
                 Histórico dos últimos confrontos entre as equipes
@@ -579,11 +584,16 @@ export default function DetailedAnalysisPage() {
             {/* Home Team Form */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {homeTeam?.image_path && (
-                    <Image src={homeTeam.image_path} alt={homeTeam.name} width={24} height={24} />
-                  )}
-                  {homeTeam?.name} (Casa)
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {homeTeam?.image_path && (
+                      <Image src={homeTeam.image_path} alt={homeTeam.name} width={24} height={24} />
+                    )}
+                    {homeTeam?.name} (Casa)
+                  </div>
+                  <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                    {homeTeamForm?.total_matches ? `${homeTeamForm.total_matches} jogos` : 'Simulado'}
+                  </div>
                 </CardTitle>
                 <CardDescription>Forma nos últimos 5 jogos</CardDescription>
               </CardHeader>
@@ -637,11 +647,16 @@ export default function DetailedAnalysisPage() {
             {/* Away Team Form */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {awayTeam?.image_path && (
-                    <Image src={awayTeam.image_path} alt={awayTeam.name} width={24} height={24} />
-                  )}
-                  {awayTeam?.name} (Visitante)
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {awayTeam?.image_path && (
+                      <Image src={awayTeam.image_path} alt={awayTeam.name} width={24} height={24} />
+                    )}
+                    {awayTeam?.name} (Visitante)
+                  </div>
+                  <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                    {awayTeamForm?.total_matches ? `${awayTeamForm.total_matches} jogos` : 'Simulado'}
+                  </div>
                 </CardTitle>
                 <CardDescription>Forma nos últimos 5 jogos</CardDescription>
               </CardHeader>
