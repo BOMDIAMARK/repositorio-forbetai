@@ -28,7 +28,7 @@ export async function GET(request: Request, context: RouteContext) {
     const [teamAId, teamBId] = teamIds.split('-vs-')
     
     // SportMonks H2H endpoint
-    const h2hUrl = `${SPORTMONKS_BASE_URL}/football/head-to-head/${teamAId}/${teamBId}?api_token=${SPORTMONKS_API_KEY}&include=fixtures.league,fixtures.participants,fixtures.scores`
+    const h2hUrl = `${SPORTMONKS_BASE_URL}/football/head-to-head/${teamAId}/${teamBId}?api_token=${SPORTMONKS_API_KEY}&include=fixtures.league;fixtures.participants;fixtures.scores`
     
     console.log(`🔍 Buscando H2H: ${teamAId} vs ${teamBId}`)
     

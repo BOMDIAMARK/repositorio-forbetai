@@ -30,7 +30,7 @@ export async function GET(request: Request, context: RouteContext) {
     const seasonStart = new Date(currentDate.getFullYear() - (currentDate.getMonth() < 6 ? 1 : 0), 6, 1) // July 1st
     
     // SportMonks team fixtures endpoint for recent matches
-    const teamFixturesUrl = `${SPORTMONKS_BASE_URL}/football/fixtures/by-team-and-season?api_token=${SPORTMONKS_API_KEY}&team_id=${teamId}&season_id=current&include=league,participants,scores,state&sort=-starting_at&limit=10`
+    const teamFixturesUrl = `${SPORTMONKS_BASE_URL}/football/fixtures/by-team-and-season?api_token=${SPORTMONKS_API_KEY}&team_id=${teamId}&season_id=current&include=league;participants;scores;state&sort=-starting_at&limit=10`
     
     console.log(`📊 Buscando forma recente do time: ${teamId}`)
     

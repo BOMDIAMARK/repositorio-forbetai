@@ -124,7 +124,7 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
   
   // Tentar primeiro com league e participants separadamente
   try {
-    const includes = "league,participants"
+    const includes = "league;participants"
     const endpoint = `/football/fixtures/between/${date}/${date}?include=${includes}`
     const response = await fetchSportMonksApi<{ data: SportMonksFixture[] }>(endpoint)
     
@@ -362,7 +362,7 @@ export async function fetchFixtureOddsDetailed(fixtureId: number): Promise<any |
   console.log(`💰 Buscando odds detalhadas da fixture: ${fixtureId}`)
   
   try {
-    const endpoint = `/football/odds/fixtures/${fixtureId}?include=bookmaker,market`
+    const endpoint = `/football/odds/fixtures/${fixtureId}?include=bookmaker;market`
     const response = await fetchSportMonksApi<{ data: any[] }>(endpoint, true)
     
     if (response.data && response.data.length > 0) {
@@ -398,7 +398,7 @@ export async function fetchFixtureEnrichedData(fixtureId: number): Promise<any |
       'scores',
       'state',
       'periods'
-    ].join(',')
+    ].join(';')
     
     const endpoint = `/football/fixtures/${fixtureId}?include=${includes}`
     const response = await fetchSportMonksApi<{ data: any }>(endpoint, true)
