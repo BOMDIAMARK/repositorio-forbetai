@@ -21,11 +21,15 @@ export default function AoVivoPage() {
     try {
       const res = await fetch("/api/live-scores")
       if (!res.ok) throw new Error("Erro ao buscar jogos ao vivo.")
-      const { data } = await res.json()
-      const sortedData = data.sort(
+      const response = await res.json()
+      
+      // Verificar se data existe e é um array
+      const data = response.data || []
+      const sortedData = Array.isArray(data) ? data.sort(
         (a: any, b: any) =>
           a.league_id - b.league_id || new Date(a.starting_at).getTime() - new Date(b.starting_at).getTime(),
-      )
+      ) : []
+      
       setLiveScores(sortedData)
       setLastUpdated(new Date())
     } catch (e: any) {

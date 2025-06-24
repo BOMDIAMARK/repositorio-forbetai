@@ -5,7 +5,10 @@ const API_KEY = process.env.SPORTMONKS_API_KEY // ⚠️ nunca prefixe com NEXT_
 
 export async function GET() {
   if (!API_KEY) {
-    return NextResponse.json({ error: "API key missing." }, { status: 500 })
+    return NextResponse.json({ 
+      error: "API key missing.",
+      data: []
+    }, { status: 500 })
   }
 
   const includes = "league;participants;scores;state;periods.type"
@@ -15,11 +18,25 @@ export async function GET() {
     const res = await fetch(url, { next: { revalidate: 15 } })
     if (!res.ok) {
       const body = await res.text()
-      return NextResponse.json({ error: body }, { status: res.status })
+      return NextResponse.json({ 
+        error: body,
+        data: []
+      }, { status: res.status })
     }
-    const data = await res.json()
-    return NextResponse.json(data, { status: 200 })
+    const apiResponse = await res.json()
+    
+    // Garantir que sempre retornamos um formato consistente
+    return NextResponse.json({
+      data: apiResponse.data || [],
+      meta: apiResponse.meta || {},
+      success: true
+    }, { status: 200 })
+    
   } catch (err) {
-    return NextResponse.json({ error: "Failed to fetch live scores." }, { status: 500 })
+    console.error("Erro na API de live scores:", err)
+    return NextResponse.json({ 
+      error: "Failed to fetch live scores.",
+      data: []
+    }, { status: 500 })
   }
 }
