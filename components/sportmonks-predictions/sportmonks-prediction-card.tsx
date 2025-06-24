@@ -8,6 +8,7 @@ import { CalendarIcon, ClockIcon, TrophyIcon } from "lucide-react"
 import { FixtureDetailsModal } from "./fixture-details-modal"
 import type { SportMonksFixture } from "@/app/(platform)/predicoes/types-sportmonks"
 import { formatOdd, getOddColor } from "@/lib/odds-mapper"
+import { getFixtureProviderInfo } from "@/lib/fixture-adapter"
 
 interface SportmonksPredictionCardProps {
   fixture: SportMonksFixture
@@ -42,6 +43,9 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
   // Get league name if available
   const leagueName = (fixture.league as any)?.data?.name || (fixture.league as any)?.name || "Liga Desconhecida"
 
+  // Get provider info for enhanced display
+  const providerInfo = getFixtureProviderInfo(fixture as any)
+  
   // Get real odds if available, otherwise show placeholders
   const hasRealOdds = fixture.processedOdds?.fullTimeResult
   const odds = hasRealOdds ? {
@@ -54,6 +58,17 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
     away: "-"
   }
 
+  // Provider info styling
+  const getProviderBadgeStyle = (cost: string) => {
+    switch (cost) {
+      case 'free': return 'bg-green-600 text-white'
+      case 'low': return 'bg-blue-600 text-white'
+      case 'medium': return 'bg-yellow-600 text-white'
+      case 'high': return 'bg-red-600 text-white'
+      default: return 'bg-gray-600 text-white'
+    }
+  }
+
   return (
     <>
       <Card className="w-full max-w-sm mx-auto bg-gradient-to-br from-slate-900 to-slate-800 text-white border-slate-700 hover:border-slate-600 transition-all duration-300">
@@ -62,7 +77,15 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
             <Badge variant="secondary" className="bg-slate-700 text-slate-200 text-xs">
               {leagueName}
             </Badge>
-            <TrophyIcon className="h-4 w-4 text-slate-400" />
+            <div className="flex items-center gap-1">
+              <Badge 
+                className={`text-xs px-1.5 py-0.5 ${getProviderBadgeStyle(providerInfo.cost)}`}
+                title={`Fonte: ${providerInfo.provider} (${providerInfo.cost})`}
+              >
+                {providerInfo.provider.charAt(0)}
+              </Badge>
+              <TrophyIcon className="h-4 w-4 text-slate-400" />
+            </div>
           </div>
         </CardHeader>
 
@@ -144,7 +167,10 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
               </div>
             </div>
             <p className="text-xs text-slate-500 text-center mt-2">
-              {hasRealOdds ? '✅ Odds reais da SportMonks' : '⏳ Odds carregadas nos detalhes'}
+              {providerInfo.hasRealOdds 
+                ? `✅ Odds reais via ${providerInfo.provider}` 
+                : `⏳ Odds disponíveis nos detalhes`
+              }
             </p>
           </div>
 
@@ -153,7 +179,7 @@ export function SportmonksPredictionCard({ fixture }: SportmonksPredictionCardPr
             onClick={() => setIsModalOpen(true)}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 rounded-lg transition-all duration-200"
           >
-            📊 Ver Detalhes & Predições {hasRealOdds ? '💰' : '🎯'}
+            📊 Ver Detalhes & Predições {providerInfo.hasRealOdds ? '💰' : '🎯'}
           </Button>
         </CardContent>
       </Card>
