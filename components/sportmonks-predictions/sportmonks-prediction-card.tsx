@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CalendarIcon, ClockIcon, TrendingUpIcon, BarChart3Icon, ImageIcon } from "lucide-react"
+import { CalendarIcon, ClockIcon, TrendingUpIcon, BarChart3Icon } from "lucide-react"
 import { FixtureDetailsModal } from "./fixture-details-modal"
 import type { SportMonksFixture } from "@/app/(platform)/predicoes/types-sportmonks"
 
