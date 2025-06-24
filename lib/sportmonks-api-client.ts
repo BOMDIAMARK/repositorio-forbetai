@@ -122,7 +122,7 @@ export async function fetchFixturesByDate(date: string): Promise<SportMonksFixtu
   }
   
   // Includes válidos para a API do SportMonks
-  const includes = "participants"
+  const includes = "participants,league"
   const endpoint = `/football/fixtures/between/${date}/${date}?include=${includes}`
 
   try {

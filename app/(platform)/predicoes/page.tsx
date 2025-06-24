@@ -66,19 +66,7 @@ export default async function PredictionsPageSportmonks() {
         </div>
       </div>
 
-      {/* Status do SportMonks */}
-      {apiMeta && (
-        <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800">
-          <Trophy className="h-4 w-4 text-orange-600" />
-          <AlertTitle className="text-orange-900 dark:text-orange-100">SportMonks API Ativa</AlertTitle>
-          <AlertDescription className="text-orange-800 dark:text-orange-200">
-            {fixtures.length > 0 
-              ? `✅ ${fixtures.length} jogos carregados com sucesso via SportMonks`
-              : '⏳ Aguardando dados da SportMonks API...'
-            }
-          </AlertDescription>
-        </Alert>
-      )}
+
 
       {errorFetching && (
         <Alert variant="destructive" className="bg-destructive/10 border-destructive/30 text-destructive-foreground">
